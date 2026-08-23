@@ -1,0 +1,43 @@
+# --- Secrets. Never commit. ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+kaggle.json
+
+# --- Data. Large and redistributable-restricted. ---
+data/raw/
+data/interim/
+data/processed/
+*.csv
+*.parquet
+*.zip
+
+# --- Model artifacts ---
+artifacts/
+*.pt
+*.pkl
+*.joblib
+*.txt.model
+*.lgb
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# --- Reports: keep markdown, drop bulky dumps ---
+reports/**/*.csv
+reports/**/*.png
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
