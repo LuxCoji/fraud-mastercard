@@ -1,0 +1,34 @@
+[
+  {
+    "ref": "cdeotte/xgb-fraud-with-magic-0-9600",
+    "title": "XGB Fraud with Magic - [0.9600]",
+    "language": "python",
+    "votes": 1307,
+    "file": "cdeotte__xgb-fraud-with-magic-0-9600.ipynb",
+    "why": "XGBoost, 0.9600 public LB. Source of the UID 'magic feature'."
+  },
+  {
+    "ref": "kyakovlev/ieee-lgbm-with-groupkfold-cv",
+    "title": " IEEE - Lgbm with GroupKFold CV",
+    "language": "python",
+    "votes": 575,
+    "file": "kyakovlev__ieee-lgbm-with-groupkfold-cv.ipynb",
+    "why": "LightGBM params + GroupKFold. Closest to our intended setup."
+  },
+  {
+    "ref": "kyakovlev/ieee-fe-with-some-eda",
+    "title": "IEEE - FE with some EDA",
+    "language": "python",
+    "votes": 364,
+    "file": "kyakovlev__ieee-fe-with-some-eda.ipynb",
+    "why": "Feature engineering: normalisation, frequency and aggregation encoding."
+  },
+  {
+    "ref": "cdeotte/eda-for-columns-v-and-id",
+    "title": "EDA for Columns V and ID",
+    "language": "python",
+    "votes": 290,
+    "file": "cdeotte__eda-for-columns-v-and-id.ipynb",
+    "why": "What the V and id_ columns actually mean - the block we must recover."
+  }
+]
