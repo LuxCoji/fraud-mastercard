@@ -3,34 +3,77 @@
 Measured on the held-out final 42 days (118,108 transactions, 4,064 fraud,
 3.441% base rate). Every encoder fitted on the training period only.
 
-## Headline
+## Final numbers
 
-| | Logistic (floor) | LightGBM | 
+| | Logistic (floor) | LightGBM |
 | --- | --- | --- |
-| AUC | 0.8160 | **0.9226** |
-| PR-AUC | 0.2043 | **0.5691** |
-| Brier | 0.03670 | **0.02119** |
+| AUC | 0.8202 | **0.9222** |
+| PR-AUC | 0.3037 | **0.5843** |
+| Brier | 0.02926 | **0.02012** |
 | Brier baseline | 0.03323 | 0.03323 |
-| Calibrated? | **No - worse than baseline** | Yes |
 
-LightGBM's PR-AUC is **2.79x** the logistic floor, so it earns its latency.
-Early stopping chose 1,172 rounds against the published 800 - as expected once
-the split changed.
+LightGBM's PR-AUC is 1.92x the floor, so it earns its latency. Early stopping
+chose 1,044 rounds against the published 800 - the expected consequence of
+changing the split.
+
+## Operating points - LightGBM
+
+| Flag rate | Fraud caught | Precision | Genuine customers hit | False alarms per catch |
+| --- | --- | --- | --- | --- |
+| 0.1% | 2.8% | 96.6% | 0.00% | 0.0 |
+| 0.5% | 13.9% | 95.3% | 0.02% | 0.0 |
+| 1.0% | 26.6% | 91.5% | 0.09% | 0.1 |
+| **2.0%** | **45.3%** | **78.0%** | **0.46%** | **0.3** |
+| 3.0% | 52.2% | 59.9% | 1.25% | 0.7 |
+| 5.0% | 60.2% | 41.5% | 3.03% | 1.4 |
+| 10.0% | 73.0% | 25.1% | 7.76% | 3.0 |
+
+**Selected operating point: 2%.** Catches 45.3% of fraud while touching 0.46% of
+genuine customers - roughly 1 in 217. Changing it later requires no retraining:
+it is a threshold applied to scores the model already produces.
+
+## What the three improvements were worth
+
+| Stage | AUC | PR-AUC | Fraud caught at 2% | Genuine hit at 2% |
+| --- | --- | --- | --- | --- |
+| Baseline features | 0.9226 | 0.5691 | 42.8% | 0.55% |
+| + UID, D-normalisation, counts | 0.9250 | 0.5857 | 45.2% | 0.46% |
+| + M4 bug fix | 0.9222 | 0.5843 | 45.3% | 0.46% |
+
+The feature work moved the 2% operating point from 42.8% to 45.3% of fraud
+caught while *reducing* genuine customers touched from 0.55% to 0.46% - better
+on both axes at once, which is the only kind of improvement worth having.
+
+Six of the top fifteen features by gain are the new per-UID aggregates
+(`C13_uid_mean`, `TransactionAmt_uid_std`, `TransactionAmt_uid_mean`,
+`D4_uid_std`, `D15_uid_mean`, `D4_uid_mean`).
+
+### The M4 fix changed nothing measurable
+
+M1-M3 and M5-M9 are T/F flags, but M4 is an ordered grade with values M0, M1,
+M2. The first implementation mapped every M column with the T/F table, which
+blanked M4 entirely - a real bug, caught from a scikit-learn imputer warning.
+
+Repairing it took M4 from 0% to 51.9% populated and moved PR-AUC from 0.5857 to
+0.5843. That is a **0.24% relative change on a single seed, which is noise**. The
+honest conclusion is not that the fix helped or hurt, but that M4 carries no
+signal this model can use. The fix is kept because the code is now correct, not
+because it bought anything.
 
 ## Against the previous project
 
 The previous attempt scored IEEE-CIS at **0.0730 PR-AUC** (best fused model,
-`docs/PHASE3_RESULTS.md`). This run scores **0.5691** on the same source.
+`docs/PHASE3_RESULTS.md`). This run scores **0.5843** on the same source - **8.0x**.
 
-That is **7.8x**, and the cause is visible in the feature importances below:
-`V258` and `V257` are the two strongest features in the model, and the V block
-is exactly what the previous project discarded as "semantically unrecoverable".
+The cause is legible in the feature importances: `V258` and `V257` are the two
+strongest features in the model, and the V block is exactly what that project
+discarded as semantically unrecoverable.
 
 ## Against the notebook
 
-Deotte's kernel reports 0.9600 AUC. This run reports 0.9226 - **0.037 lower**,
-which is the predicted direction and roughly the predicted size. The difference
-is the two things we removed:
+Deotte's kernel reports 0.9600 AUC. This run reports 0.9222 - 0.038 lower, the
+predicted direction and roughly the predicted size. The gap is the two things we
+removed:
 
 - UID post-processing, which overwrites a prediction with the average of that
   card's *other* transactions, including later ones.
@@ -38,49 +81,22 @@ is the two things we removed:
 
 Both are legitimate on Kaggle and neither exists at authorisation time.
 
-## Operating points - LightGBM
-
-| Flag rate | Fraud caught | Precision | Genuine customers hit | False alarms per catch |
-| --- | --- | --- | --- | --- |
-| 0.1% | 2.9% | 100.0% | 0.00% | 0.0 |
-| 0.5% | 13.6% | 93.2% | 0.04% | 0.1 |
-| **1.0%** | **26.1%** | **89.7%** | **0.11%** | **0.1** |
-| **2.0%** | **42.8%** | **73.6%** | **0.55%** | **0.4** |
-| 3.0% | 50.9% | 58.4% | 1.29% | 0.7 |
-| 5.0% | 60.2% | 41.4% | 3.03% | 1.4 |
-| 10.0% | 74.1% | 25.5% | 7.72% | 2.9 |
-
-The 0.5%-1% band is unusually strong: 90%+ precision means roughly nine of every
-ten flags is genuinely fraud. Below 2% the model is confident and cheap; past 3%
-precision falls away quickly.
-
-## Top features by gain
-
-| Feature | Origin |
-| --- | --- |
-| V258, V257, V294, V187 | Raw V block - **discarded by the previous project** |
-| C13, C14, C1, C4, C8 | Raw counting columns |
-| D2 | Raw time delta |
-| TransactionAmt_card1_addr1_P_emaildomain_std | Ours, from the notebooks |
-| TransactionAmt_card1_mean | Ours, from the notebooks |
-| TransactionAmt_card1_addr1_mean | Ours, from the notebooks |
-
-Four of the top fifteen are the per-card aggregation features, so the notebook's
-feature engineering is carrying real weight - but the V columns carry more.
-
-## One honest caveat on the number
+## Caveat on the number
 
 Within the training period, a card's aggregate statistics include that card's
-own later training transactions. That is a mild self-leak *during fitting*, but
-test features are built from training-period statistics only, so it cannot
-inflate the reported test score. If anything it creates a small train/test
-feature mismatch that costs a little accuracy. The 0.9226 is honest or slightly
+own later training rows. That is a mild self-leak *during fitting*, but test
+features are built from training-period statistics only, so it cannot inflate
+the reported test score. If anything it creates a small train/test feature
+mismatch that costs a little accuracy. The 0.9222 is honest or slightly
 conservative, not optimistic.
 
-## Calibration note
+## Not yet done
 
-The logistic floor is **worse than the base-rate baseline** on Brier (0.03670 vs
-0.03323) - it ranks acceptably but its probabilities are not trustworthy.
-LightGBM is comfortably better (0.02119). Since every policy threshold is a
-probability, this alone would rule the logistic model out of production even if
-its ranking were competitive.
+- Multi-seed runs. Every number here is a single seed, so differences below
+  roughly 1% relative should not be read as real.
+- Adding back some of the 219 dropped V columns. V258 and V257 dominate the
+  model, so the block matters more than the correlation analysis assumed.
+- The three-band policy (allow / step-up / block). Currently a single threshold,
+  which forces every flag to be a hard decision.
+- Calibration fitting. Brier is already better than baseline, but no explicit
+  calibration step has been applied.
