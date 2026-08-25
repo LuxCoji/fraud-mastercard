@@ -41,3 +41,7 @@ reports/**/*.png
 .idea/
 .DS_Store
 Thumbs.db
+
+# --- Training side-effects ---
+catboost_info/
+debug.log
