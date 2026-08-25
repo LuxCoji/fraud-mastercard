@@ -134,3 +134,38 @@ authorisation time and more memory in the feature store, for a gain that has not
 cleared its own noise floor.
 
 **Kept at 120 columns.** Revisit only if a multi-seed run shows the gap holding.
+
+## Settled - three seeds each
+
+| | 120 V columns | 339 V columns |
+| --- | --- | --- |
+| PR-AUC mean | **0.5865** | 0.5823 |
+| PR-AUC spread | +-0.0024 | +-0.0021 |
+| AUC mean | 0.9243 | 0.9244 |
+| Recall at 2% | **45.19%** | 44.85% |
+| Rounds chosen | 990 / 1034 / 1097 | 900 / 870 / 1015 |
+
+Per seed:
+
+| Seed | 120 V | 339 V |
+| --- | --- | --- |
+| 42 | 0.5841 | 0.5817 |
+| 7 | 0.5888 | 0.5806 |
+| 2024 | 0.5867 | 0.5846 |
+
+**Mean gap: -0.71%, and 339 loses on all three seeds.**
+
+The single-seed +1.22% was noise, and it pointed the wrong way. Adding the 219
+columns back is not merely unproven - it is consistently, mildly *worse*.
+
+A plausible mechanism: `colsample_bytree` is 0.5, so each tree sees half the
+feature set. Padding that set with 219 near-duplicates lowers the chance any
+given tree draws an informative column. The dropped columns are not neutral
+ballast; they crowd out the ones that matter. The shorter runs chosen by early
+stopping (870-1015 rounds against 990-1097) point the same way.
+
+Seed spread is +-0.0024, about 0.4% relative. The "1% is noise" bar set earlier
+was roughly right in magnitude - the single comparison simply landed on a fluke
+large enough to clear it.
+
+**Decision: 120 columns, confirmed.** Deotte's correlation analysis was correct.
