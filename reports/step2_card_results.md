@@ -240,3 +240,78 @@ from the ranking, and the 2% cut only asks which transactions sit at the top.
 But it does mean the blend **cannot drive a probability threshold until a
 calibration layer is fitted on top**. That is required work before this ships,
 not an optional refinement.
+
+---
+
+# Calibration - the blend needed it, and the obvious method was wrong
+
+Experiment D left the blend uncalibrated: rank-averaging produced a Brier of
+0.2986 against a base-rate baseline of 0.0332. Ranking was fine, probabilities
+were meaningless, and every policy threshold is a probability.
+
+Fixed with a three-way chronological split of the training period:
+
+| Slice | Rows | Fraud | Purpose |
+| --- | --- | --- | --- |
+| fit | 401,567 | 14,001 | grows the trees |
+| early stop | 35,432 | 1,322 | picks the tree count |
+| calibrate | 35,433 | 1,276 | maps scores to probabilities |
+| test | 118,108 | 4,064 | untouched until the end |
+
+## Three methods, measured
+
+| Method | PR-AUC | Brier | Calibrated? | Distinct scores |
+| --- | --- | --- | --- | --- |
+| Blend, raw | 0.5785 | 0.2986 | **No** | - |
+| Isotonic on the blend | 0.5515 | 0.0208 | Yes | **153** |
+| Isotonic per model, then average | 0.5650 | 0.0219 | Yes | 1,554 |
+| **Platt on the blend** | **0.5785** | **0.0234** | **Yes** | **95,190** |
+
+## Isotonic fixes the probabilities by destroying the ranking
+
+Isotonic regression is a step function. On this data it collapsed 118,108
+distinct scores into **153**, tying 99.87% of rows - the largest single tie
+group held 31,552 transactions at one identical score. PR-AUC fell 0.5785 ->
+0.5515 as a direct result.
+
+That matters more than the number suggests. The whole policy rests on selecting
+the top 2% of scores. When tens of thousands of transactions share a score,
+"the top 2%" stops being well defined.
+
+Platt is a sigmoid: strictly increasing, so no two distinct scores can ever
+collapse onto one probability. Ranking survives exactly - PR-AUC 0.578487
+against the raw blend's 0.578489, a difference that is floating-point noise.
+
+Its Brier is slightly worse than isotonic's (0.0234 vs 0.0208) because a sigmoid
+cannot bend to an arbitrary shape. Both sit well under the 0.0332 baseline, so
+both are honest; only one keeps the ranking.
+
+**Selection rule used:** Brier decides whether a method is usable at all. Among
+the usable ones, PR-AUC decides - the policy reads the ranking, and the
+probability needs to be honest rather than minimal.
+
+## What calibration cost
+
+Holding out 7.5% of the training period for the calibration slice means the
+model fits on 85% rather than 90% of it:
+
+| | Experiment D | Final calibrated model |
+| --- | --- | --- |
+| PR-AUC | 0.5948 | 0.5785 |
+| Fraud caught at 2% | 46.67% | 45.6% |
+
+**-2.7% PR-AUC, about one point of recall.** That is the price of being able to
+read the score as a probability, and it is not optional: without it the
+three-band policy has no meaningful thresholds to sit on.
+
+## Final card model
+
+Blend of LightGBM and XGBoost, rank-averaged, Platt-calibrated.
+
+| Flag rate | Fraud caught | Precision | Genuine customers hit |
+| --- | --- | --- | --- |
+| 0.5% | 13.8% | 94.9% | 0.03% |
+| 1.0% | 26.6% | 91.5% | 0.09% |
+| **2.0%** | **45.6%** | **78.4%** | **0.45%** |
+| 3.0% | 52.6% | 60.4% | 1.23% |
+| 5.0% | 59.4% | 40.9% | 3.06% |
