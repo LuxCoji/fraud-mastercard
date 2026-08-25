@@ -169,3 +169,74 @@ was roughly right in magnitude - the single comparison simply landed on a fluke
 large enough to clear it.
 
 **Decision: 120 columns, confirmed.** Deotte's correlation analysis was correct.
+
+---
+
+# Experiment D - Does blending LightGBM and XGBoost help?
+
+Three seeds each. Decision rule fixed before results: adopt the blend only if
+its mean PR-AUC beats LightGBM by more than the combined seed spread, and it
+wins on every seed.
+
+## Result: REAL
+
+| Model | PR-AUC mean | Spread | Recall at 2% |
+| --- | --- | --- | --- |
+| **Blend (LGB + XGB)** | **0.5948** | +-0.0033 | **46.67%** |
+| LightGBM alone | 0.5865 | +-0.0024 | 45.19% |
+| XGBoost alone | 0.5663 | +-0.0170 | 46.10% |
+
+Per seed:
+
+| Seed | LightGBM | XGBoost | Blend |
+| --- | --- | --- | --- |
+| 42 | 0.5841 | 0.5743 | **0.5982** |
+| 7 | 0.5888 | 0.5468 | **0.5916** |
+| 2024 | 0.5867 | 0.5778 | **0.5945** |
+
+Gap +1.41%, spread 0.40%, wins all three seeds. **Passes.**
+
+At the 2% operating point the blend catches **46.67%** of fraud against
+LightGBM's **45.19%** - 1.48 points, or roughly **60 more frauds caught per
+118,000 transactions**.
+
+## XGBoost alone is NOT the answer
+
+Its mean PR-AUC is 3.45% *below* LightGBM and it loses on seeds individually,
+so it fails the same rule. It is also strikingly unstable: spread +-0.0170
+against LightGBM's +-0.0024, a seven-fold difference, with early stopping
+landing anywhere between 1,743 and 2,913 rounds.
+
+That instability is exactly why the blend works. Averaging cancels the noise:
+the blend's spread (+-0.0033) is closer to LightGBM's than to XGBoost's, while
+its mean beats both. This is an ensemble effect, not one model quietly winning.
+
+## Depth 8 rather than Deotte's depth 12
+
+Depth 12 could not run on this machine - roughly 3-4 GB against ~1.5 GB free,
+and it was killed three times at the same point. Depth 8 plus `QuantileDMatrix`
+fits.
+
+On seed 42, where both were measured:
+
+| | XGBoost alone | Blend |
+| --- | --- | --- |
+| depth 8 | 0.5743 | 0.5982 |
+| depth 12 | 0.5972 (+4.0%) | 0.6017 (+0.6%) |
+
+Depth 12 makes XGBoost substantially better but the blend barely moves.
+LightGBM already covers what the weaker XGBoost misses, so improving XGBoost
+adds little on top. **+0.6% is not worth 3x the inference cost**, though that
+rests on one seed.
+
+## Outstanding: the blend is not calibrated
+
+Rank-averaging deliberately discards calibration - a rank of 0.5 is not a 50%
+chance of fraud. Measured Brier is **0.2985** against LightGBM's 0.0202 and a
+base-rate baseline of 0.0332.
+
+This does not affect anything reported here: every operating point is computed
+from the ranking, and the 2% cut only asks which transactions sit at the top.
+But it does mean the blend **cannot drive a probability threshold until a
+calibration layer is fitted on top**. That is required work before this ships,
+not an optional refinement.
