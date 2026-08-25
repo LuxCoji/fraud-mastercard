@@ -127,7 +127,14 @@ class CardFeatureBuilder:
     fit on test rows by accident: `fit` is called once, with train only.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, keep_v: list[int] | str = "curated") -> None:
+        """`keep_v` selects which V columns reach the model.
+
+        "curated" uses Deotte's 120-column shortlist; "all" keeps all 339, which
+        is the experiment testing whether the 219 dropped as redundant were
+        carrying anything after all. A list of integers picks them explicitly.
+        """
+        self.keep_v = keep_v
         self.frequency_maps: dict[str, pd.Series] = {}
         # name -> (group column, lookup table)
         self.aggregate_maps: dict[str, tuple[str, pd.Series]] = {}
@@ -198,9 +205,13 @@ class CardFeatureBuilder:
         # only invite the model to memorise individual cards.
         drop = ["isFraud", "TransactionID", "TransactionDT",
                 "uid", "card1_addr1", "card1_addr1_P_emaildomain"]
-        keep_v = {f"V{i}" for i in KEEP_V}
-        dropped_v = [c for c in out.columns
-                     if c.startswith("V") and c[1:].isdigit() and c not in keep_v]
+        if self.keep_v == "all":
+            dropped_v = []
+        else:
+            selected = KEEP_V if self.keep_v == "curated" else self.keep_v
+            keep = {f"V{i}" for i in selected}
+            dropped_v = [c for c in out.columns
+                         if c.startswith("V") and c[1:].isdigit() and c not in keep]
 
         out = out.drop(columns=[c for c in drop + dropped_v if c in out.columns])
         return out.select_dtypes(include=["number"])
