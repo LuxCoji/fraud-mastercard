@@ -100,3 +100,37 @@ conservative, not optimistic.
   which forces every flag to be a hard decision.
 - Calibration fitting. Brier is already better than baseline, but no explicit
   calibration step has been applied.
+
+---
+
+# Experiment C - Do the 219 discarded V columns matter?
+
+Deotte's correlation analysis kept 120 of the 339 V columns. Since `V258` and
+`V257` turned out to be the two strongest features in the model, the block was
+worth re-testing.
+
+| | Curated (120 V) | All (339 V) |
+| --- | --- | --- |
+| Features | 292 | 511 |
+| AUC | 0.9222 | 0.9227 |
+| PR-AUC | 0.5843 | **0.5914** |
+| Brier | 0.02012 | 0.01997 |
+| Fraud caught at 2% | 45.3% | 45.8% |
+| Genuine hit at 2% | 0.456% | 0.438% |
+
+**PR-AUC change: +1.22%.**
+
+## Verdict: not proven
+
+Before running this, the stated bar was that anything under roughly 1% on a
+single seed is noise. The result came in at +1.22% - barely over that line, and
+a single seed cannot reliably separate +1.22% from zero.
+
+What is true is that all four measures moved the same direction, which is mildly
+suggestive. What is not true is that this is a demonstrated improvement.
+
+The cost is concrete: 511 features against 292, so 75% more to compute at
+authorisation time and more memory in the feature store, for a gain that has not
+cleared its own noise floor.
+
+**Kept at 120 columns.** Revisit only if a multi-seed run shows the gap holding.
