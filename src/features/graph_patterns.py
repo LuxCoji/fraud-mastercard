@@ -173,17 +173,25 @@ def scatter_gather_features(g: nx.DiGraph,
     return pd.DataFrame.from_dict(rows, orient="index").astype("float32")
 
 
-def build_pattern_features(df: pd.DataFrame) -> pd.DataFrame:
+def build_pattern_features(df: pd.DataFrame,
+                           with_chains: bool = False) -> pd.DataFrame:
     """All pattern counts, one row per account.
 
     `df` must already carry a `_ts` datetime column and must cover the training
     period only - these are fitted statistics and applying them to rows the
     model will be scored on would leak the future.
+
+    `with_chains` adds the STACK and BIPARTITE detectors from `chains.py`.
     """
     g = build_temporal_graph(df)
     cycles = cycle_features(g)
     scatter = scatter_gather_features(g)
     out = scatter.join(cycles, how="outer")
+
+    if with_chains:
+        from features.chains import build_chain_features
+        chain_feats, _ = build_chain_features(g)
+        out = out.join(chain_feats, how="outer")
 
     # An account absent from the cycle table sits on no cycles - that is a real
     # zero, not a missing value.

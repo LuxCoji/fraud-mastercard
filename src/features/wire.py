@@ -64,8 +64,10 @@ class WireFeatureBuilder:
     the two feature sets can be compared honestly.
     """
 
-    def __init__(self, with_patterns: bool = True) -> None:
+    def __init__(self, with_patterns: bool = True,
+                 with_chains: bool = False) -> None:
         self.with_patterns = with_patterns
+        self.with_chains = with_chains
         self.out_stats: pd.DataFrame | None = None
         self.in_stats: pd.DataFrame | None = None
         self.pattern_stats: pd.DataFrame | None = None
@@ -82,7 +84,8 @@ class WireFeatureBuilder:
             frame = train if "_ts" in train.columns else train.assign(
                 _ts=pd.to_datetime(train["Timestamp"], format="%Y/%m/%d %H:%M",
                                    errors="coerce"))
-            self.pattern_stats = build_pattern_features(frame)
+            self.pattern_stats = build_pattern_features(
+                frame, with_chains=self.with_chains)
 
         self.format_codes = {v: i for i, v in
                              enumerate(sorted(train["Payment Format"].dropna().unique()))}

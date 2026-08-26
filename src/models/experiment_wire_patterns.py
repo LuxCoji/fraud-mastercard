@@ -29,11 +29,13 @@ from models.metrics import format_operating_points, headline, operating_points
 from models.train_card import EARLY_STOPPING, LGB_PARAMS, MAX_ROUNDS
 
 
-def run(with_patterns: bool, label: str, train_df, test_df, y_train, y_test) -> dict:
+def run(with_patterns: bool, label: str, train_df, test_df, y_train, y_test,
+        with_chains: bool = False) -> dict:
     import lightgbm as lgb
 
     t0 = time.time()
-    builder = WireFeatureBuilder(with_patterns=with_patterns).fit(train_df)
+    builder = WireFeatureBuilder(with_patterns=with_patterns,
+                                 with_chains=with_chains).fit(train_df)
     X_train = builder.transform(train_df)
     X_test = builder.transform(test_df)
     build_mins = (time.time() - t0) / 60
@@ -68,7 +70,8 @@ def run(with_patterns: bool, label: str, train_df, test_df, y_train, y_test) -> 
     if with_patterns:
         pattern_cols = [c for c in X_train.columns
                         if any(k in c for k in ("cycle", "scatter", "gather",
-                                                "two_hop", "burst"))]
+                                                "two_hop", "burst", "chain",
+                                                "bipartite"))]
         share = importance[importance.feature.isin(pattern_cols)].gain.sum() / importance.gain.sum()
         print(f"\n  pattern-count features carry {share:.1%} of total gain")
         print("\n  top 12 features:")
@@ -99,8 +102,9 @@ def main() -> None:
     gc.collect()
 
     rows = [
-        run(False, "AGGREGATES ONLY (current)", train_df, test_df, y_train, y_test),
-        run(True, "AGGREGATES + PATTERN COUNTS", train_df, test_df, y_train, y_test),
+        run(True, "PATTERN COUNTS (current best)", train_df, test_df, y_train, y_test),
+        run(True, "+ CHAIN & BIPARTITE", train_df, test_df, y_train, y_test,
+            with_chains=True),
     ]
 
     out = pd.DataFrame(rows)

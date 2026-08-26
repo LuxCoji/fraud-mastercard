@@ -165,3 +165,88 @@ FAN-OUT, SCATTER-GATHER, GATHER-SCATTER) and three are not:
 rewards ordering the easy majority of legitimate traffic; PR-AUC rewards the top
 of the ranking. The pattern features traded a little of the former for a lot of
 the latter, which is the trade this rail wants.
+
+---
+
+# Chain and bipartite detectors - rejected
+
+`from_two_hop_payers` and `to_two_hop_payers` - crude stand-ins for bipartite
+structure - were among the strongest of the pattern features, which suggested
+building the real structure would pay. It did not.
+
+| | Pattern counts | + chain & bipartite |
+| --- | --- | --- |
+| Features | 49 | 67 |
+| **PR-AUC** | **0.1522** | 0.1416 |
+| AUC | 0.9706 | 0.9735 |
+| Rounds chosen | 618 | **116** |
+
+**-7.0%.** Rejected.
+
+## Why, most likely
+
+The tree count is the tell: 618 rounds down to 116. The model stopped improving
+five times sooner with more features available, which is what happens when new
+columns are noisy enough to produce splits that do not generalise. Eighteen
+weakly-informative features across 49 existing ones is enough to make early
+stopping fire early.
+
+## The detector was measured against ground truth first, and was weak
+
+Tested on the labelled rings before being wired in:
+
+| Shape | Rings found by the chain detector |
+| --- | --- |
+| CYCLE | 25 / 54 |
+| RANDOM | 19 / 41 |
+| **STACK** | **7 / 43** |
+| GATHER-SCATTER | 5 / 51 |
+| **BIPARTITE** | **4 / 49** |
+| FAN-OUT, FAN-IN | 4 / 48, 4 / 40 |
+| SCATTER-GATHER | 1 / 44 |
+
+It finds cycles better than the stacks it was written for, and the bipartite
+detector proper found 1 ring in 49.
+
+Two real bugs were found and fixed by measuring the ground truth first, and
+neither was enough:
+
+- The time window was 72 hours. Labelled STACK rings span a **median of 73
+  hours** - the round number excluded more than half of them by an hour. Widened
+  to 120.
+- The value band was 0.70-1.10. Real hop ratios have a median of 0.99 but a p10
+  of 0.05 and p90 of 28.7, so the tight band admitted only 34.8% of genuine
+  hops. Widened to 0.10-10.0.
+
+Both fixes together took chains found from 120 to 720 and ring coverage from
+5/43 to 7/43. The approach is wrong, not the parameters.
+
+## Why forward path-walking is the wrong tool here
+
+A STACK is a chain of *transactions*, but the detector walks a graph of
+*collapsed account pairs* - parallel transactions between one pair are summed
+into a single edge. That destroys exactly the sequence a layering chain is made
+of. A correct STACK detector would walk transactions in time order, not edges.
+
+BIPARTITE fails differently: it is a property of a *set* of accounts, and this
+implementation asks a per-account question ("do my payees have other payers?").
+The right formulation is dense-subgraph or biclique detection over the whole
+graph, which is a different and much more expensive algorithm.
+
+## Kept anyway, for a different job
+
+`chains.py` is retained and wired into `policy/cases.py` rather than into the
+feature set. It is a poor *feature* but a working *explanation*: given an
+account the model has already flagged, it returns the actual path -
+
+```
+811A67510 -> 812D1B280 -> 811FCA7B0 -> 811EDA940 -> 811E3C9F0 -> 81235EC40
+7 hops, 49,168 in / 37,845 out (77% retained) over 37h
+```
+
+That is the difference between an alert and a case, and it does not need to
+improve PR-AUC to be worth having. The cost is acceptable because the search
+runs only on accounts already flagged - hundreds of alerts, not five million
+transactions.
+
+**Feature set stays at 49. PR-AUC stays at 0.1522.**
