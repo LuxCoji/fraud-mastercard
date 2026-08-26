@@ -250,3 +250,69 @@ runs only on accounts already flagged - hundreds of alerts, not five million
 transactions.
 
 **Feature set stays at 49. PR-AUC stays at 0.1522.**
+
+---
+
+# Blend and calibration - and a reversal
+
+Applied the card rail's two proven steps: rank-average LightGBM with XGBoost,
+then calibrate on a held-out slice (fit 85% / early stop 7.5% / calibrate 7.5%).
+
+| Model | PR-AUC | Brier | vs baseline | Calibrated? |
+| --- | --- | --- | --- | --- |
+| LightGBM alone | 0.1035 | 0.001800 | -1.9% | **No** |
+| **XGBoost alone** | **0.1831** | **0.001599** | **+9.5%** | **Yes** |
+| Blend, raw | 0.1619 | 0.328705 | - | No |
+| Blend + Platt | 0.1619 | 0.001709 | +3.2% | Yes |
+| Blend + isotonic | 0.1500 | 0.001618 | +8.4% | Yes (133 scores) |
+
+## XGBoost alone wins here, and the blend hurts
+
+This is the reverse of the card rail, where the blend beat both parents on all
+three seeds. Here XGBoost alone is **+13% over the blend** and **+77% over
+LightGBM**, and it is already well calibrated without any Platt layer.
+
+Blending only helps when two models are wrong in uncorrelated ways. On the card
+rail LightGBM and XGBoost were close in strength (0.5865 vs 0.5663), so
+averaging cancelled noise. Here they are not close - 0.1831 against 0.1035 - so
+averaging drags the stronger model down toward the weaker one. That is not a
+surprising result once stated; it is a reminder that a technique proven on one
+rail is a hypothesis on the next, not a conclusion.
+
+## LightGBM got worse, and that is the calibration cost
+
+0.1522 in the previous experiment, 0.1035 here. Nothing about the model changed
+- it now fits on 85% of the training period instead of 90%, because 7.5% is
+held out for calibration. **A third of its PR-AUC for a calibration slice** is a
+steep price, and far steeper than the card rail's (0.5948 -> 0.5785, about 3%).
+
+XGBoost absorbed the same reduction and still scored 0.1831, which is further
+evidence the two models are genuinely different here rather than
+interchangeable.
+
+## Isotonic collapsed the scores again
+
+133 distinct values from 1,015,669 rows - the same step-function failure
+measured on the card rail, where it produced 153. Platt gave 817,840 distinct
+scores and preserved the ranking exactly (PR-AUC identical to the raw blend to
+four decimals). The card rail's conclusion holds on this rail unchanged.
+
+## This is one seed
+
+The card rail measured XGBoost's seed spread at **+-0.0170 against LightGBM's
++-0.0024** - seven times less stable. A single XGBoost run is exactly the
+measurement least worth trusting, and the +1.22% V-column result that turned out
+to be -0.71% across three seeds is the standing warning.
+
+The gap here is large (+77% over LightGBM), so it is unlikely to be pure noise -
+but "unlikely" is not "measured". **Not adopting XGBoost-alone as the wire model
+until it is run across three seeds.**
+
+## Current best, pending that check
+
+| Flag rate | Laundering caught | Precision | False alarms per catch |
+| --- | --- | --- | --- |
+| 0.1% | 14.7% | 26.0% | 2.8 |
+| 0.5% | 37.5% | 13.3% | 6.5 |
+| **1.0%** | **56.4%** | 10.0% | 9.0 |
+| 2.0% | 76.5% | 6.8% | 13.8 |
