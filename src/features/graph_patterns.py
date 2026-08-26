@@ -38,14 +38,32 @@ SCATTER_GATHER_WINDOW_HOURS = 6
 MAX_CYCLE_LENGTH = 6
 
 
-def build_temporal_graph(df: pd.DataFrame) -> nx.DiGraph:
+def build_temporal_graph(df: pd.DataFrame, min_account_txns: int = 1) -> nx.DiGraph:
     """Account graph with timing on every edge.
 
     Parallel transactions between one pair collapse to a single edge that keeps
     their count, value and the span between first and last - which is what the
     window tests need.
+
+    `min_account_txns` drops accounts appearing fewer than that many times
+    before the graph is built. On HI-Medium - 31.9M transactions over roughly
+    three million accounts - building the full graph and enumerating its cycles
+    exhausted 12 GB and was killed. The long tail of accounts seen once or
+    twice cannot sit on a ring of any interesting size, so excluding them costs
+    almost nothing and is what makes the larger datasets tractable at all.
+
+    Left at 1 by default so existing results stay reproducible.
     """
-    grouped = df.groupby(["Account", "Account.1"]).agg(
+    if min_account_txns > 1:
+        appearances = pd.concat([df["Account"], df["Account.1"]]).value_counts()
+        keep = set(appearances[appearances >= min_account_txns].index)
+        before = len(df)
+        df = df[df["Account"].isin(keep) & df["Account.1"].isin(keep)]
+        print(f"    graph pruning: {len(keep):,} accounts with >= "
+              f"{min_account_txns} transactions, {len(df):,} of {before:,} rows kept",
+              flush=True)
+
+    grouped = df.groupby(["Account", "Account.1"], observed=True).agg(
         count=("Amount Paid", "size"),
         total=("Amount Paid", "sum"),
         first=("_ts", "min"),
@@ -83,18 +101,30 @@ def _cycle_span_hours(g: nx.DiGraph, cycle: list) -> float:
 
 
 def cycle_features(g: nx.DiGraph, window_hours: int = CYCLE_WINDOW_HOURS,
-                   max_length: int = MAX_CYCLE_LENGTH) -> pd.DataFrame:
+                   max_length: int = MAX_CYCLE_LENGTH,
+                   max_cycles: int | None = None) -> pd.DataFrame:
     """Per account: how many tight cycles, how short, how valuable.
 
     A cycle only counts if it closes inside `window_hours`. Money returning to
     its origin within a day is layering; the same loop over months is trade.
+
+    `max_cycles` caps enumeration. Cycle counts grow explosively with graph
+    size - HI-Small produced 372,952 - and on a larger graph the enumeration
+    itself is what exhausts memory. Stopping early biases the counts downward
+    but leaves them comparable across accounts, which is what a tree model
+    needs; an uncapped run that gets killed produces nothing at all.
     """
     candidates = _prune_to_cycle_candidates(g)
     stats: dict[str, dict] = defaultdict(
         lambda: {"cycles": 0, "tight_cycles": 0, "min_len": np.nan,
                  "min_span": np.nan, "max_value": 0.0})
 
+    seen = 0
     for cycle in nx.simple_cycles(candidates, length_bound=max_length):
+        seen += 1
+        if max_cycles is not None and seen > max_cycles:
+            print(f"    cycle enumeration capped at {max_cycles:,}", flush=True)
+            break
         span = _cycle_span_hours(candidates, cycle)
         tight = span <= window_hours
         value = min(candidates.edges[cycle[i], cycle[(i + 1) % len(cycle)]]["total"]
@@ -174,7 +204,9 @@ def scatter_gather_features(g: nx.DiGraph,
 
 
 def build_pattern_features(df: pd.DataFrame,
-                           with_chains: bool = False) -> pd.DataFrame:
+                           with_chains: bool = False,
+                           min_account_txns: int = 1,
+                           max_cycles: int | None = None) -> pd.DataFrame:
     """All pattern counts, one row per account.
 
     `df` must already carry a `_ts` datetime column and must cover the training
@@ -182,9 +214,15 @@ def build_pattern_features(df: pd.DataFrame,
     model will be scored on would leak the future.
 
     `with_chains` adds the STACK and BIPARTITE detectors from `chains.py`.
+
+    `min_account_txns` and `max_cycles` bound the work for large datasets; both
+    are inert at their defaults. See `build_temporal_graph` and `cycle_features`
+    for why each is needed above a few million rows.
     """
-    g = build_temporal_graph(df)
-    cycles = cycle_features(g)
+    g = build_temporal_graph(df, min_account_txns=min_account_txns)
+    print(f"    graph: {g.number_of_nodes():,} nodes, "
+          f"{g.number_of_edges():,} edges", flush=True)
+    cycles = cycle_features(g, max_cycles=max_cycles)
     scatter = scatter_gather_features(g)
     out = scatter.join(cycles, how="outer")
 
