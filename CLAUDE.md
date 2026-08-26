@@ -61,3 +61,23 @@ The CLI needs `jupyter-kernel-client<1.0.0`; it is pinned in
 Local: 16 GB total, typically **1-2 GB free** (Chrome and VS Code hold ~5 GB).
 XGBoost at `max_depth=12` was killed three times locally; depth 8 plus
 `QuantileDMatrix` fits. Check free memory before starting anything large.
+
+## Kaggle gotchas found the hard way
+
+**Dataset paths are nested.** An attached dataset lands at
+`/kaggle/input/datasets/<owner>/<slug>/<file>`, not `/kaggle/input/<slug>/<file>`.
+Probe with `os.walk("/kaggle/input")` in a throwaway kernel rather than guessing.
+
+**A push returns HTTP 200 even when it fails.** Check the `error` field in the
+response body.
+
+**Only one `from __future__` import survives concatenation.** Assembling a
+kernel from several modules needs the `__future__` lines stripped and one added
+at the very top, or Python rejects the file.
+
+**Compile before pushing.** `compile(src, "k", "exec")` locally costs nothing and
+catches what a round trip through the queue would take minutes to reveal.
+
+**The `kaggle` Python library mangles long Windows paths** on dataset upload -
+it builds a token filename from the full path and fails. Copy the folder to a
+short path such as `%TEMP%\ktup` first.
