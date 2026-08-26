@@ -67,12 +67,14 @@ class WireFeatureBuilder:
     def __init__(self, with_patterns: bool = True,
                  with_chains: bool = False,
                  min_account_txns: int = 1,
-                 max_cycles: int | None = None) -> None:
+                 max_cycles: int | None = None,
+                 cycle_time_budget_s: float | None = None) -> None:
         self.with_patterns = with_patterns
         self.with_chains = with_chains
         # Bounds for large datasets; inert at their defaults.
         self.min_account_txns = min_account_txns
         self.max_cycles = max_cycles
+        self.cycle_time_budget_s = cycle_time_budget_s
         self.out_stats: pd.DataFrame | None = None
         self.in_stats: pd.DataFrame | None = None
         self.pattern_stats: pd.DataFrame | None = None
@@ -92,7 +94,8 @@ class WireFeatureBuilder:
             self.pattern_stats = build_pattern_features(
                 frame, with_chains=self.with_chains,
                 min_account_txns=self.min_account_txns,
-                max_cycles=self.max_cycles)
+                max_cycles=self.max_cycles,
+                cycle_time_budget_s=self.cycle_time_budget_s)
 
         self.format_codes = {v: i for i, v in
                              enumerate(sorted(train["Payment Format"].dropna().unique()))}

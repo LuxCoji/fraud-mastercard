@@ -26,6 +26,7 @@ cycle-detection attempt got wrong:
 """
 from __future__ import annotations
 
+import time
 from collections import defaultdict
 
 import networkx as nx
@@ -102,29 +103,46 @@ def _cycle_span_hours(g: nx.DiGraph, cycle: list) -> float:
 
 def cycle_features(g: nx.DiGraph, window_hours: int = CYCLE_WINDOW_HOURS,
                    max_length: int = MAX_CYCLE_LENGTH,
-                   max_cycles: int | None = None) -> pd.DataFrame:
+                   max_cycles: int | None = None,
+                   time_budget_s: float | None = None) -> pd.DataFrame:
     """Per account: how many tight cycles, how short, how valuable.
 
     A cycle only counts if it closes inside `window_hours`. Money returning to
     its origin within a day is layering; the same loop over months is trade.
 
-    `max_cycles` caps enumeration. Cycle counts grow explosively with graph
-    size - HI-Small produced 372,952 - and on a larger graph the enumeration
-    itself is what exhausts memory. Stopping early biases the counts downward
-    but leaves them comparable across accounts, which is what a tree model
-    needs; an uncapped run that gets killed produces nothing at all.
+    **Enumeration must be bounded by time, not only by count.** A count cap only
+    fires when a cycle is *yielded*; if the generator spends minutes searching
+    between yields it never triggers. Measured: HI-Small (515k nodes, 1.0M
+    edges) enumerated 372,952 cycles in 449 s. HI-Medium's graph is 1.43M nodes
+    and 3.54M edges, and a run with a 2M count cap produced nothing in 52
+    minutes before being cancelled - the cap was never reached because the
+    search itself, not the yielding, was the cost.
+
+    A time budget guarantees termination on any graph. The counts it produces
+    are partial, but they remain comparable across accounts, which is what a
+    tree model reads. Partial features beat a job that never returns.
     """
     candidates = _prune_to_cycle_candidates(g)
     stats: dict[str, dict] = defaultdict(
         lambda: {"cycles": 0, "tight_cycles": 0, "min_len": np.nan,
                  "min_span": np.nan, "max_value": 0.0})
 
+    started = time.monotonic()
     seen = 0
     for cycle in nx.simple_cycles(candidates, length_bound=max_length):
         seen += 1
         if max_cycles is not None and seen > max_cycles:
-            print(f"    cycle enumeration capped at {max_cycles:,}", flush=True)
+            print(f"    cycle enumeration stopped: {max_cycles:,} cycle cap",
+                  flush=True)
             break
+        # Checked periodically rather than every iteration - a clock read per
+        # cycle would itself be a measurable cost at these volumes.
+        if time_budget_s is not None and seen % 10_000 == 0:
+            elapsed = time.monotonic() - started
+            if elapsed > time_budget_s:
+                print(f"    cycle enumeration stopped: {time_budget_s:.0f}s budget "
+                      f"reached after {seen:,} cycles", flush=True)
+                break
         span = _cycle_span_hours(candidates, cycle)
         tight = span <= window_hours
         value = min(candidates.edges[cycle[i], cycle[(i + 1) % len(cycle)]]["total"]
@@ -137,6 +155,9 @@ def cycle_features(g: nx.DiGraph, window_hours: int = CYCLE_WINDOW_HOURS,
                 s["min_len"] = np.nanmin([s["min_len"], len(cycle)])
                 s["min_span"] = np.nanmin([s["min_span"], span])
                 s["max_value"] = max(s["max_value"], value)
+
+    print(f"    cycles used: {seen:,} over {time.monotonic() - started:.0f}s",
+          flush=True)
 
     if not stats:
         return pd.DataFrame(columns=["cycle_count", "tight_cycle_count",
@@ -206,7 +227,8 @@ def scatter_gather_features(g: nx.DiGraph,
 def build_pattern_features(df: pd.DataFrame,
                            with_chains: bool = False,
                            min_account_txns: int = 1,
-                           max_cycles: int | None = None) -> pd.DataFrame:
+                           max_cycles: int | None = None,
+                           cycle_time_budget_s: float | None = None) -> pd.DataFrame:
     """All pattern counts, one row per account.
 
     `df` must already carry a `_ts` datetime column and must cover the training
@@ -222,7 +244,8 @@ def build_pattern_features(df: pd.DataFrame,
     g = build_temporal_graph(df, min_account_txns=min_account_txns)
     print(f"    graph: {g.number_of_nodes():,} nodes, "
           f"{g.number_of_edges():,} edges", flush=True)
-    cycles = cycle_features(g, max_cycles=max_cycles)
+    cycles = cycle_features(g, max_cycles=max_cycles,
+                            time_budget_s=cycle_time_budget_s)
     scatter = scatter_gather_features(g)
     out = scatter.join(cycles, how="outer")
 
