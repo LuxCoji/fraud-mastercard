@@ -33,6 +33,25 @@ from features.chains import Chain, find_chains
 
 
 @dataclass
+class Fan:
+    """A hub paying out to, or collecting from, many counterparties at once."""
+
+    hub: str
+    counterparties: list[str]
+    direction: str          # "out" (hub pays them) or "in" (they pay hub)
+    total: float
+    span_hours: float
+
+    def describe(self) -> str:
+        arrow = "->" if self.direction == "out" else "<-"
+        shown = ", ".join(self.counterparties[:4])
+        more = f" +{len(self.counterparties) - 4} more" if len(self.counterparties) > 4 else ""
+        return (f"{self.hub} {arrow} [{shown}{more}]  |  "
+                f"{len(self.counterparties)} counterparties, "
+                f"{self.total:,.0f} over {self.span_hours:.0f}h")
+
+
+@dataclass
 class Case:
     """One investigable unit: linked alerts plus the structure behind them."""
 
@@ -41,6 +60,7 @@ class Case:
     transactions: pd.DataFrame
     chains: list[Chain] = field(default_factory=list)
     cycles: list[list[str]] = field(default_factory=list)
+    fans: list[Fan] = field(default_factory=list)
 
     @property
     def max_score(self) -> float:
@@ -59,6 +79,10 @@ class Case:
         if self.chains:
             longest = max(c.length for c in self.chains)
             return f"CHAIN ({longest} hops)"
+        if self.fans:
+            widest = max(self.fans, key=lambda f: len(f.counterparties))
+            return (f"FAN-{widest.direction.upper()} "
+                    f"({len(widest.counterparties)} counterparties)")
         return "no structure found"
 
     def summary(self) -> str:
@@ -66,6 +90,39 @@ class Case:
                 f"{len(self.accounts):>3} accounts | "
                 f"{self.total_value:>14,.0f} | "
                 f"score {self.max_score:.3f} | {self.evidence}")
+
+
+MIN_FAN_WIDTH = 3          # below this it is ordinary payment activity
+FAN_WINDOW_HOURS = 24      # a fan is a burst, not a year of normal business
+
+
+def find_fans(g: nx.DiGraph, min_width: int = MIN_FAN_WIDTH,
+              window_hours: int = FAN_WINDOW_HOURS) -> list[Fan]:
+    """Hubs that pay out to, or collect from, many counterparties in a burst.
+
+    FAN-OUT and FAN-IN are the easiest laundering shapes to see and were already
+    counted as features - but nothing rendered them, so a case built on one
+    reported "no structure found". This closes that gap with no new algorithm:
+    the structure is one hop deep.
+    """
+    fans: list[Fan] = []
+
+    for hub in g.nodes:
+        for direction, neighbours in (("out", list(g.successors(hub))),
+                                      ("in", list(g.predecessors(hub)))):
+            if len(neighbours) < min_width:
+                continue
+            edges = [g.edges[hub, n] if direction == "out" else g.edges[n, hub]
+                     for n in neighbours]
+            times = [e["first"] for e in edges]
+            span = (max(times) - min(times)).total_seconds() / 3600
+            if span > window_hours:
+                continue
+            fans.append(Fan(hub=hub, counterparties=neighbours,
+                            direction=direction,
+                            total=sum(e["total"] for e in edges),
+                            span_hours=span))
+    return fans
 
 
 def _link_alerts(alerts: pd.DataFrame, sender: str, receiver: str) -> list[set[str]]:
@@ -110,6 +167,7 @@ def build_cases(alerts: pd.DataFrame, graph: nx.DiGraph,
                 case.cycles = [c for c in nx.simple_cycles(sub, length_bound=6)
                                if len(c) >= 2]
                 case.chains = find_chains(sub)
+                case.fans = find_fans(sub)
 
         cases.append(case)
 

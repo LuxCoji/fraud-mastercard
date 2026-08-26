@@ -85,9 +85,9 @@ def main() -> None:
     print(f"  alerts per case            {len(alerts) / len(cases):>6.1f}")
 
     # --- is the trace informative? -----------------------------------------
-    with_structure = sum(1 for c in cases if c.cycles or c.chains)
+    with_structure = sum(1 for c in cases if c.cycles or c.chains or c.fans)
     real_with_structure = sum(1 for c in cases
-                              if c.has_laundering and (c.cycles or c.chains))
+                              if c.has_laundering and (c.cycles or c.chains or c.fans))
     print(f"\n  cases with a traced structure   {with_structure:>6,} "
           f"({with_structure / len(cases):.1%})")
     if real:
@@ -113,7 +113,7 @@ def main() -> None:
           f"({hits / len(top20):.0%})")
 
     # --- one worked example ------------------------------------------------
-    example = next((c for c in cases if c.has_laundering and (c.cycles or c.chains)), None)
+    example = next((c for c in cases if c.has_laundering and (c.cycles or c.chains or c.fans)), None)
     if example is None:
         example = next((c for c in cases if c.has_laundering), None)
     if example is not None:
