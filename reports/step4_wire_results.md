@@ -316,3 +316,69 @@ until it is run across three seeds.**
 | 0.5% | 37.5% | 13.3% | 6.5 |
 | **1.0%** | **56.4%** | 10.0% | 9.0 |
 | 2.0% | 76.5% | 6.8% | 13.8 |
+
+---
+
+# Three-seed check: XGBoost adopted, but the metrics disagree
+
+| Seed | LightGBM PR-AUC | XGBoost PR-AUC | LightGBM recall@1% | XGBoost recall@1% |
+| --- | --- | --- | --- | --- |
+| 7 | 0.1177 | 0.1263 | 42.0% | 51.1% |
+| 42 | 0.1317 | 0.1831 | 44.8% | 56.4% |
+| 2024 | 0.1079 | 0.1431 | 45.2% | 55.1% |
+| **mean** | **0.1191 +-0.0120** | **0.1508 +-0.0292** | **44.0% +-1.7** | **54.2% +-2.8** |
+
+## The verdict depends on which metric you ask
+
+| Metric | Gap | Spread | Gap / spread | Reading |
+| --- | --- | --- | --- | --- |
+| PR-AUC | +0.0317 | 0.0315 | **1.0x** | marginal |
+| **Recall at 1%** | **+10.2 pts** | 3.3 pts | **3.1x** | **clear** |
+| Brier | -0.0001 | 0.0001 | 1.4x | marginal |
+
+The pre-registered rule - beat the spread and win every seed - **passes on
+PR-AUC by 0.0002**, which is not a margin anyone should lean on. On its own that
+would be a coin flip dressed as a result.
+
+**Recall at 1% is the metric that decides it.** XGBoost wins by roughly ten
+points on every seed, at three times the noise. That is also the number this
+rail is actually operated on: an investigator works a fixed alert budget, and
+"of the wires we review, how much laundering did we find" is the question. PR-AUC
+integrates over alert rates nobody will ever use, including the 50% end.
+
+**Adopted: XGBoost.** Not because PR-AUC crossed a line by a rounding error, but
+because the operational metric is decisive and consistent.
+
+## Both models are unstable on this rail
+
+Early stopping across seeds: LightGBM 588 / 112 / 75, XGBoost 399 / 92 / 153.
+An eight-fold and four-fold spread respectively. Compare the card rail, where
+LightGBM chose 990 / 1034 / 1097 - a 10% spread.
+
+A separate observation from the same run: an earlier build scored LightGBM at
+0.1035 on nominal seed 42, and this run scored 0.1317 on the same nominal seed.
+The only difference was that this run also set `bagging_seed` and
+`feature_fraction_seed`. **A 27% swing from which random streams were pinned.**
+
+The cause is the base rate. 3,380 laundering cases in the fit slice against four
+million rows means every model is learning from a very small positive set, and
+which subset the bagging happens to draw matters enormously. Nothing here is
+reportable from a single run.
+
+## Consequence for how this rail is reported
+
+Every wire-rail number needs a seed spread attached. The card rail's +-0.4% let
+single runs be read directly; this rail's +-10% on PR-AUC does not. Anything
+below roughly 25% relative on PR-AUC is noise here.
+
+## Final wire model
+
+XGBoost, depth 8, on 49 pattern-count features. Already calibrated - Brier
+0.001655 against a 0.001766 baseline - so no Platt layer is needed.
+
+| Flag rate | Laundering caught | Precision | False alarms per catch |
+| --- | --- | --- | --- |
+| 0.1% | 14.7% | 26.0% | 2.8 |
+| 0.5% | 37.5% | 13.3% | 6.5 |
+| **1.0%** | **54.2% (mean of 3 seeds)** | ~10% | ~9 |
+| 2.0% | 76.5% | 6.8% | 13.8 |
