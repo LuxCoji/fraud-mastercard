@@ -95,3 +95,73 @@ current scores are usable for ranking only.
   the count suggests, and catching all eight legs is worth more again. A
   ring-level recall metric would measure what an investigator cares about.
 - The eight topology labels are unused as features or as evaluation strata.
+
+---
+
+# Pattern counts - the largest single improvement in the project
+
+The first version of this rail counted what an account does in aggregate:
+degrees, totals, pass-through ratios. The IBM paper behind this dataset
+attributes its strong gradient-boosted result to counting the laundering
+*shapes* themselves. Measured on our split:
+
+| | Aggregates only | + pattern counts |
+| --- | --- | --- |
+| Features | 25 | 49 |
+| **PR-AUC** | 0.1048 | **0.1522** |
+| AUC | 0.9756 | 0.9706 |
+| Brier | 0.001762 | **0.001654** |
+| Rounds chosen | 145 | 618 |
+
+**+45.2% PR-AUC.** Against a 0.4% noise floor, that is not close.
+
+Pattern-count features carry **30.7% of total gain**, with `from_two_hop_payers`
+and `to_two_hop_payers` both in the top twelve.
+
+## Where the gain actually lands
+
+| Flag rate | Aggregates | + patterns | Change |
+| --- | --- | --- | --- |
+| 0.1% | 10.9% | **14.5%** | +3.6 |
+| 0.5% | 28.6% | **33.7%** | +5.1 |
+| 1.0% | 47.7% | **48.4%** | +0.7 |
+| 2.0% | **73.6%** | 67.3% | **-6.3** |
+| 3.0% | **82.6%** | 75.2% | **-7.4** |
+
+The improvement is concentrated at the **top of the ranking** and reverses
+below 2%. Precision at 0.1% rises from 19.2% to 25.6%, and false alarms per
+catch fall from 4.2 to 2.9.
+
+That is the right shape for this rail. An investigator works the top of a
+queue, so a model that is sharper in its first few hundred alerts and blunter in
+its thousandth is more useful than the reverse - even though the aggregate-only
+model catches more laundering if you are willing to review 3% of all wires,
+which no bank is.
+
+## The time windows were the fix
+
+The failed standalone cycle detection used a 30-day window on an 18-day dataset,
+so every cycle trivially passed and 71.6% of all accounts were flagged. The
+paper's windows are **one day for cycles, six hours for scatter-gather**. Same
+algorithm, useful output.
+
+## Two patterns still uncovered
+
+Of the eight labelled shapes, five are counted directly (CYCLE, FAN-IN,
+FAN-OUT, SCATTER-GATHER, GATHER-SCATTER) and three are not:
+
+- **STACK** (43 rings) - a chain A->B->C->D->E. Detected only indirectly through
+  pass-through ratios; nothing traces the chain itself.
+- **BIPARTITE** (49 rings) - one group paying another group. Approximated by
+  two-hop neighbour counts, which is a hint rather than the structure. Notably
+  those two-hop features are the strongest of the new set, which suggests
+  building the structure properly would pay.
+- **RANDOM** (41 rings) - has no shape by construction. No graph feature can
+  address it; only amount and timing anomalies can.
+
+## AUC fell while PR-AUC rose
+
+0.9756 -> 0.9706 on AUC, 0.1048 -> 0.1522 on PR-AUC. Both are correct. AUC
+rewards ordering the easy majority of legitimate traffic; PR-AUC rewards the top
+of the ranking. The pattern features traded a little of the former for a lot of
+the latter, which is the trade this rail wants.

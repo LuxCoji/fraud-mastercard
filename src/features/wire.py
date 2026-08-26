@@ -55,11 +55,20 @@ def _account_stats(df: pd.DataFrame, key: str, other: str,
 
 
 class WireFeatureBuilder:
-    """Fits account-level graph statistics on training rows only."""
+    """Fits account-level graph statistics on training rows only.
 
-    def __init__(self) -> None:
+    `with_patterns` adds explicit counts of the laundering shapes themselves -
+    tight cycles, scatter-gather widths, fan-out bursts. The IBM paper behind
+    this dataset reports that counting the patterns is what lets a gradient
+    boosted model beat every GNN they tested, so it is off by default only so
+    the two feature sets can be compared honestly.
+    """
+
+    def __init__(self, with_patterns: bool = True) -> None:
+        self.with_patterns = with_patterns
         self.out_stats: pd.DataFrame | None = None
         self.in_stats: pd.DataFrame | None = None
+        self.pattern_stats: pd.DataFrame | None = None
         self.format_codes: dict[str, int] = {}
         self.currency_codes: dict[str, int] = {}
         self._fitted = False
@@ -67,6 +76,13 @@ class WireFeatureBuilder:
     def fit(self, train: pd.DataFrame) -> "WireFeatureBuilder":
         self.out_stats = _account_stats(train, SENDER, RECEIVER, "sent")
         self.in_stats = _account_stats(train, RECEIVER, SENDER, "recv")
+
+        if self.with_patterns:
+            from features.graph_patterns import build_pattern_features
+            frame = train if "_ts" in train.columns else train.assign(
+                _ts=pd.to_datetime(train["Timestamp"], format="%Y/%m/%d %H:%M",
+                                   errors="coerce"))
+            self.pattern_stats = build_pattern_features(frame)
 
         self.format_codes = {v: i for i, v in
                              enumerate(sorted(train["Payment Format"].dropna().unique()))}
@@ -128,6 +144,13 @@ class WireFeatureBuilder:
         with np.errstate(divide="ignore", invalid="ignore"):
             out["amount_vs_sender_mean"] = (
                 amount.values / sent["sent_mean"].values).astype("float32")
+
+        # --- the laundering shapes themselves ------------------------------
+        if self.pattern_stats is not None:
+            for side, col in (("from", SENDER), ("to", RECEIVER)):
+                stats = self.pattern_stats.reindex(df[col].values)
+                for name in self.pattern_stats.columns:
+                    out[f"{side}_{name}"] = stats[name].values
 
         return out.replace([np.inf, -np.inf], np.nan)
 
