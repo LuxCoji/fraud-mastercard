@@ -74,10 +74,11 @@ def _link_alerts(alerts: pd.DataFrame, sender: str, receiver: str) -> list[set[s
     Two alerts touching the same account are almost certainly the same
     operation, so they belong in one case.
     """
+    # zip over the two columns rather than itertuples: IBM AML's receiver column
+    # is literally named "Account.1", and itertuples mangles a name with a dot
+    # into an inaccessible positional attribute.
     linker = nx.Graph()
-    for row in alerts.itertuples(index=False):
-        a, b = getattr(row, sender), getattr(row, receiver)
-        linker.add_edge(a, b)
+    linker.add_edges_from(zip(alerts[sender].values, alerts[receiver].values))
     return list(nx.connected_components(linker))
 
 
@@ -103,7 +104,11 @@ def build_cases(alerts: pd.DataFrame, graph: nx.DiGraph,
         if len(accounts) <= max_accounts_per_case:
             sub = graph.subgraph(accounts)
             if sub.number_of_edges():
-                case.cycles = list(nx.simple_cycles(sub, length_bound=6))
+                # A one-node "cycle" is an account paying itself. IBM AML's
+                # Reinvestment payment format does exactly that and it is
+                # ordinary, so a self-loop is not evidence of anything.
+                case.cycles = [c for c in nx.simple_cycles(sub, length_bound=6)
+                               if len(c) >= 2]
                 case.chains = find_chains(sub)
 
         cases.append(case)
