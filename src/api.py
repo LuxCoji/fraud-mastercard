@@ -62,10 +62,17 @@ def build_wire_scorer():
     names = json.loads(names_path.read_text())
 
     class _BoosterAdapter:
-        """xgb.Booster wants a DMatrix; the scorer hands it a numpy row."""
+        """xgb.Booster wants a DMatrix; the scorer hands it a numpy row.
+
+        The feature names must be passed through. The booster was trained from
+        a DataFrame, so it recorded column names and validates them on predict -
+        a bare numpy array has none, and XGBoost rejects the call rather than
+        assuming positional order.
+        """
 
         def predict(self, features):
-            return booster.predict(xgb.DMatrix(features, missing=np.nan))
+            return booster.predict(
+                xgb.DMatrix(features, missing=np.nan, feature_names=names))
 
     scorer = FastWireScorer(builder, names, [_BoosterAdapter()])
 
