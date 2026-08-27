@@ -23,9 +23,57 @@ import numpy as np
 import pandas as pd
 
 import config as cfg
-from router import CARD_ALERT_RATE, CARD_BLOCK_RATE, FraudRouter, thresholds_from_scores
+from router import (CARD_ALERT_RATE, CARD_BLOCK_RATE, WIRE_ALERT_RATE,
+                    FraudRouter, thresholds_from_scores)
 
 _state: dict[str, Any] = {"router": None, "loaded_at": None, "thresholds": {}}
+
+
+def build_wire_scorer():
+    """Load the wire rail, or return None if its artifacts are absent.
+
+    Returning None rather than raising keeps the card rail servable on a machine
+    that has never trained the wire model - the router already treats a missing
+    scorer as "allow, unscored" rather than guessing.
+    """
+    import json
+
+    import xgboost as xgb
+
+    from data import loaders
+    from features.wire import WireFeatureBuilder, sort_by_time
+    from models.wire_scorer import FastWireScorer
+
+    model_path = cfg.ARTIFACTS / "wire_xgboost.json"
+    names_path = cfg.ARTIFACTS / "wire_feature_names.json"
+    if not (model_path.exists() and names_path.exists()):
+        print("wire artifacts missing - wire rail will allow unscored", flush=True)
+        return None, None
+
+    df = sort_by_time(loaders.load_wire())
+    df["_ts"] = pd.to_datetime(df["Timestamp"], format="%Y/%m/%d %H:%M",
+                               errors="coerce")
+    split = int(len(df) * 0.80)
+    fit_end = int(split * 0.9)
+    builder = WireFeatureBuilder(with_patterns=True).fit(df.iloc[:fit_end])
+
+    booster = xgb.Booster()
+    booster.load_model(str(model_path))
+    names = json.loads(names_path.read_text())
+
+    class _BoosterAdapter:
+        """xgb.Booster wants a DMatrix; the scorer hands it a numpy row."""
+
+        def predict(self, features):
+            return booster.predict(xgb.DMatrix(features, missing=np.nan))
+
+    scorer = FastWireScorer(builder, names, [_BoosterAdapter()])
+
+    # Threshold from held-out scores at the wire rail's 1% operating point.
+    held = cfg.INTERIM / "wire_scores_shipped.npy"
+    threshold = (float(np.quantile(np.load(held), 1 - WIRE_ALERT_RATE))
+                 if held.exists() else 0.5)
+    return scorer, threshold
 
 
 def build_router() -> FraudRouter:
@@ -72,9 +120,16 @@ def build_router() -> FraudRouter:
         "card_block_rate": CARD_BLOCK_RATE, "card_alert_rate": CARD_ALERT_RATE,
     }
 
+    wire_scorer, wire_threshold = build_wire_scorer()
+    if wire_threshold is not None:
+        _state["thresholds"]["wire_alert"] = wire_threshold
+        _state["thresholds"]["wire_alert_rate"] = WIRE_ALERT_RATE
+
     return FraudRouter(card_scorer=card_scorer,
+                       wire_scorer=wire_scorer,
                        card_block_threshold=block_t,
-                       card_alert_threshold=alert_t)
+                       card_alert_threshold=alert_t,
+                       wire_alert_threshold=wire_threshold)
 
 
 def get_router() -> FraudRouter:
