@@ -83,3 +83,61 @@ Cycle enumeration is the entire cost and it scales far worse than the data does.
 The wire rail moves to HI-Medium: **68.65% of laundering caught at a 1% alert
 rate**, up from 54.18%. Reported with a seed spread on recall (+-0.62%) rather
 than on PR-AUC, because that is what the rail is operated on.
+
+---
+
+# Artifacts exported and promoted
+
+The first HI-Medium run measured 68.65% and saved nothing, so the shipped model
+stayed the 55.48% HI-Small one. Re-run with an export step:
+
+```
+EXPORTED  recall@1% 69.48%  PR-AUC 0.3262
+```
+
+| | HI-Small (v1) | **HI-Medium (v2)** |
+| --- | --- | --- |
+| Rows | 5,078,345 | 31,898,239 |
+| Labelled rings | 370 | 2,756 |
+| **Recall at 1%** | 55.48% | **69.48%** |
+| PR-AUC | 0.1377 | 0.3262 |
+| Precision at 1% | ~10% | 11.6% |
+| Brier | - | 0.00137 |
+
+**+14 points of laundering caught at the same alert rate.**
+
+Registered both and promoted through the gate rather than by overwriting a file:
+
+```
+promote v2 -> {'promoted': True, 'active': 'v2', 'previous': 'v1',
+               'reason': 'metrics acceptable'}
+
+rail    version   recall@op   active
+wire    v1         0.5548
+wire    v2         0.6948      <--
+```
+
+v1 is retained, so `registry.rollback("wire")` restores it in one call if the
+new model misbehaves in a way the held-out metrics did not show.
+
+## The seed spread got worse, and the reason is one seed
+
+| | run 1 | run 2 |
+| --- | --- | --- |
+| PR-AUC spread | 20.5% | **36.7%** |
+| Recall at 1% spread | 0.62% | **1.18%** |
+
+Seed 2024 scored PR-AUC 0.1606 against seed 42's 0.3262 - a 2x gap - while their
+recall at 1% differed by 2.3 points (67.20% vs 69.48%).
+
+That is the same pattern seen throughout this rail, now in a sharper form:
+**PR-AUC is unstable here and recall at the operating point is not.** Reporting
+PR-AUC for the wire rail invites exactly the wrong conclusion; recall at 1% is
+the number to quote, and it should carry its spread.
+
+## Standing caveats
+
+- Cycle enumeration hit its 900-second budget after 1.2M cycles, so the pattern
+  features are built on **partial** counts. 69.48% is a floor.
+- The source is synthetic. Checked clean of the artefact that made PaySim
+  unusable, but clean is not real.
