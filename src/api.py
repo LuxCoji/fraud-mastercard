@@ -23,8 +23,8 @@ import numpy as np
 import pandas as pd
 
 import config as cfg
-from router import (CARD_ALERT_RATE, CARD_BLOCK_RATE, WIRE_ALERT_RATE,
-                    FraudRouter, thresholds_from_scores)
+from router import (AMOUNT_EXPONENT, CARD_ALERT_RATE, CARD_BLOCK_RATE,
+                    WIRE_ALERT_RATE, FraudRouter, thresholds_from_scores)
 
 _state: dict[str, Any] = {"router": None, "loaded_at": None, "thresholds": {}}
 
@@ -127,6 +127,16 @@ def build_router() -> FraudRouter:
         "card_block_rate": CARD_BLOCK_RATE, "card_alert_rate": CARD_ALERT_RATE,
     }
 
+    # Calibrate the amount-aware step-up so it spends the same alert budget a
+    # flat threshold would. Solving for the cost constant rather than guessing it
+    # keeps review capacity fixed - the constraint that actually binds.
+    from policy.cost_threshold import calibrate_fp_cost
+    amounts = X_test["TransactionAmt"].to_numpy(dtype="float64")
+    amount_cost = calibrate_fp_cost(held_out, amounts ** AMOUNT_EXPONENT,
+                                    CARD_ALERT_RATE)
+    _state["thresholds"]["card_amount_cost"] = amount_cost
+    _state["thresholds"]["card_amount_exponent"] = AMOUNT_EXPONENT
+
     wire_scorer, wire_threshold = build_wire_scorer()
     if wire_threshold is not None:
         _state["thresholds"]["wire_alert"] = wire_threshold
@@ -136,7 +146,8 @@ def build_router() -> FraudRouter:
                        wire_scorer=wire_scorer,
                        card_block_threshold=block_t,
                        card_alert_threshold=alert_t,
-                       wire_alert_threshold=wire_threshold)
+                       wire_alert_threshold=wire_threshold,
+                       amount_cost=amount_cost)
 
 
 def get_router() -> FraudRouter:

@@ -75,6 +75,32 @@ WIRE_ALERT_RATE = 0.01       # investigator capacity, not a confidence level
 # payment type as safe.
 TRANSFER_RAIL_ENABLED = False
 
+# The step-up threshold varies with the amount at risk; the block threshold does
+# not. Elkan (2001) puts the cost-minimising boundary at
+#
+#     threshold = cost(false positive) / (cost(false positive) + cost(false negative))
+#
+# where the false-negative cost is the amount and the false-positive cost is
+# roughly fixed. So a large transaction should need less confidence to challenge.
+#
+# The exponent damps that. Measured at an identical 2% alert budget:
+#
+#     exponent  fraud value stopped  customers flagged  of the 20 largest
+#     0.0 (flat)        30.7%              511                 1
+#     0.5               44.2%            1,078 (2.1x)          9
+#     1.0 (full)        45.4%            1,552 (3.0x)         10
+#
+# 0.5 is the knee - most of the value gain for 2.1x the friction rather than 3x.
+# Past it the gain flattens while the cost keeps climbing.
+AMOUNT_EXPONENT = 0.5
+
+# **Applied to step-up only.** A challenge is an OTP - cheap friction, and worth
+# spending on a large transaction. A block is a lost sale and an angry customer,
+# so it keeps a fixed high bar regardless of amount. Making blocking easier for
+# large transactions would put the system's most expensive mistake exactly where
+# the customer is most valuable.
+AMOUNT_AWARE_STEP_UP = True
+
 
 def route(txn: dict) -> Rail:
     """Which rail does this transaction belong to?
@@ -101,29 +127,59 @@ class FraudRouter:
     def __init__(self, card_scorer=None, wire_scorer=None,
                  card_block_threshold: float | None = None,
                  card_alert_threshold: float | None = None,
-                 wire_alert_threshold: float | None = None) -> None:
+                 wire_alert_threshold: float | None = None,
+                 amount_cost: float | None = None) -> None:
         self.card_scorer = card_scorer
         self.wire_scorer = wire_scorer
         self.card_block_threshold = card_block_threshold
         self.card_alert_threshold = card_alert_threshold
         self.wire_alert_threshold = wire_alert_threshold
+        # Calibrated so the amount-aware step-up spends the same alert budget as
+        # a flat threshold would. None disables it and restores flat behaviour.
+        self.amount_cost = amount_cost
+
+    def step_up_threshold(self, amount: float | None) -> float:
+        """The confidence a transaction of this size needs to be challenged.
+
+        Falls as the amount rises. Bounded at both ends: without a floor a large
+        enough amount would challenge every transaction of that size regardless
+        of score, and without a ceiling a near-zero amount would never be
+        challenged at all.
+        """
+        flat = self.card_alert_threshold
+        if not AMOUNT_AWARE_STEP_UP or self.amount_cost is None or amount is None:
+            return flat if flat is not None else 1.0
+        scaled = self.amount_cost / (self.amount_cost + max(float(amount), 0.0) ** AMOUNT_EXPONENT)
+        return float(min(max(scaled, 0.01), 0.99))
 
     # -- per-rail policy ----------------------------------------------------
-    def _decide_card(self, score: float) -> Decision:
+    def _decide_card(self, score: float, amount: float | None = None) -> Decision:
         """Three bands. Blocking is reserved for near-certainty.
 
         Measured on the held-out test set: a single threshold at 2% declines
         0.456% of genuine customers; splitting the same budget so only the top
         0.5% is blocked declines 0.025% - **95% fewer** - and catches the same
         amount of fraud, because the difference is challenged rather than lost.
+
+        The block threshold is fixed. The step-up threshold varies with amount.
         """
         if self.card_block_threshold is not None and score >= self.card_block_threshold:
             return Decision(Rail.CARD, Action.BLOCK, score,
-                            "score in the top band, where precision is ~95%")
-        if self.card_alert_threshold is not None and score >= self.card_alert_threshold:
-            return Decision(Rail.CARD, Action.STEP_UP, score,
-                            "elevated risk - challenge rather than decline")
-        return Decision(Rail.CARD, Action.ALLOW, score, "below the alert threshold")
+                            "score in the top band, where precision is ~95%",
+                            evidence={"threshold": self.card_block_threshold,
+                                      "amount_aware": False})
+
+        threshold = self.step_up_threshold(amount)
+        if score >= threshold:
+            aware = (AMOUNT_AWARE_STEP_UP and self.amount_cost is not None
+                     and amount is not None)
+            reason = ("elevated risk for this amount - challenge rather than decline"
+                      if aware else "elevated risk - challenge rather than decline")
+            return Decision(Rail.CARD, Action.STEP_UP, score, reason,
+                            evidence={"threshold": round(threshold, 6),
+                                      "amount": amount, "amount_aware": aware})
+        return Decision(Rail.CARD, Action.ALLOW, score, "below the alert threshold",
+                        evidence={"threshold": round(threshold, 6)})
 
     def _decide_wire(self, score: float) -> Decision:
         """Two bands, and neither of them blocks.
@@ -145,7 +201,8 @@ class FraudRouter:
             if self.card_scorer is None:
                 return Decision(rail, Action.ALLOW, 0.0,
                                 "no card model loaded", scored=False)
-            return self._decide_card(self.card_scorer.score(txn))
+            return self._decide_card(self.card_scorer.score(txn),
+                                     txn.get("TransactionAmt"))
 
         if rail is Rail.WIRE:
             if self.wire_scorer is None:

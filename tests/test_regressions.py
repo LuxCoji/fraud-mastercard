@@ -270,3 +270,55 @@ def test_wire_model_matches_the_current_feature_count():
                                                 "two_hop", "burst"))]
     assert len(names) > 40, f"expected the pattern feature set, got {len(names)}"
     assert pattern_features, "pattern features are missing from the shipped model"
+
+
+# --- amount-aware step-up ----------------------------------------------------
+
+def test_step_up_threshold_falls_as_amount_rises():
+    """A larger transaction needs less confidence to be challenged.
+
+    Elkan's rule: the cost of a false negative is the amount at risk, while the
+    cost of a false positive is roughly fixed. Measured on the card rail, a flat
+    threshold caught 1 of the 20 largest frauds; the amount-aware one catches 9.
+    """
+    from router import FraudRouter
+
+    router = FraudRouter(card_alert_threshold=0.40, amount_cost=5.632)
+    thresholds = [router.step_up_threshold(a) for a in (10, 100, 1000, 3000)]
+
+    assert thresholds == sorted(thresholds, reverse=True), \
+        "threshold must fall monotonically as amount rises"
+    assert thresholds[0] > 0.5, "a small amount should need high confidence"
+    assert thresholds[-1] < 0.2, "a large amount should need much less"
+
+
+def test_block_threshold_ignores_amount():
+    """Blocking stays at a fixed bar however large the transaction.
+
+    A challenge is an OTP - cheap, and worth spending on a large payment. A
+    block is a lost sale. Making blocking easier for large transactions would
+    put the most expensive mistake exactly where the customer is most valuable.
+    """
+    from router import Action, FraudRouter
+
+    router = FraudRouter(card_block_threshold=0.90, card_alert_threshold=0.40,
+                         amount_cost=5.632)
+
+    # A score below the block bar must not block, no matter the amount.
+    for amount in (10, 1_000_000):
+        decision = router._decide_card(0.85, amount)
+        assert decision.action is not Action.BLOCK
+
+    # And a score above it blocks regardless of amount.
+    assert router._decide_card(0.95, 10).action is Action.BLOCK
+    assert router._decide_card(0.95, 1_000_000).action is Action.BLOCK
+
+
+def test_amount_aware_falls_back_when_uncalibrated():
+    """Without a cost constant the router must behave exactly as before."""
+    from router import FraudRouter
+
+    router = FraudRouter(card_alert_threshold=0.40)      # no amount_cost
+    assert router.step_up_threshold(10) == 0.40
+    assert router.step_up_threshold(100_000) == 0.40
+    assert router.step_up_threshold(None) == 0.40
