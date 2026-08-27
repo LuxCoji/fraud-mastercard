@@ -101,6 +101,42 @@ AMOUNT_EXPONENT = 0.5
 # the customer is most valuable.
 AMOUNT_AWARE_STEP_UP = True
 
+# Geography shifts the step-up threshold too, but for a different reason than
+# amount: it changes the *prior* probability of fraud rather than the cost of
+# being wrong. Measured on the held-out card period:
+#
+#     domestic        89.5% of traffic,  2.28% fraud,  2,414 frauds
+#     cross-border     0.4% of traffic,  8.77% fraud,     37 frauds
+#     country unknown 10.1% of traffic, 13.50% fraud,  1,613 frauds
+#
+# The finding worth noting is that **a missing country code, not a foreign one,
+# is where the risk lives**. It is 5.9x the domestic rate and carries 40% of all
+# fraud in a tenth of traffic. Missingness is the signal here, not a data
+# quality nuisance.
+#
+# **Tested and switched off.** Adjusting the threshold by segment *lost* 59% of
+# the value recall, and the reason is worth keeping:
+#
+#     segment       fraud rate    mean score    score ratio
+#     domestic          2.283%        0.0165          1.00x
+#     cross-border      8.768%        0.0918          5.58x
+#     unknown          13.504%        0.1338          8.13x
+#
+# The model already scores unknown-country transactions 8.13x higher than
+# domestic ones, against a 5.91x difference in actual fraud rate. It has priced
+# the segment in - it slightly *over*-prices it - because addr2 is one of its
+# input features. Lowering the threshold on top of that counts the same evidence
+# twice.
+#
+# The distinction that matters, and the reason the amount adjustment does work:
+#
+#     amount  changes the COST of a mistake     - the model cannot know this
+#     segment changes the PROBABILITY of fraud  - the model already knows this
+#
+# A threshold should only be adjusted for things outside the model's view.
+# Anything the features already capture belongs in the score, not in the policy.
+SEGMENT_AWARE_STEP_UP = False
+
 
 def route(txn: dict) -> Rail:
     """Which rail does this transaction belong to?
@@ -128,7 +164,9 @@ class FraudRouter:
                  card_block_threshold: float | None = None,
                  card_alert_threshold: float | None = None,
                  wire_alert_threshold: float | None = None,
-                 amount_cost: float | None = None) -> None:
+                 amount_cost: float | None = None,
+                 segment_risk: dict | None = None,
+                 home_country=None) -> None:
         self.card_scorer = card_scorer
         self.wire_scorer = wire_scorer
         self.card_block_threshold = card_block_threshold
@@ -137,23 +175,45 @@ class FraudRouter:
         # Calibrated so the amount-aware step-up spends the same alert budget as
         # a flat threshold would. None disables it and restores flat behaviour.
         self.amount_cost = amount_cost
+        # Risk multiple per geography segment, fitted on the training period.
+        self.segment_risk = segment_risk or {}
+        self.home_country = home_country
 
-    def step_up_threshold(self, amount: float | None) -> float:
-        """The confidence a transaction of this size needs to be challenged.
+    def step_up_threshold(self, amount: float | None,
+                          addr2=None) -> float:
+        """The confidence this transaction needs to be challenged.
 
-        Falls as the amount rises. Bounded at both ends: without a floor a large
-        enough amount would challenge every transaction of that size regardless
-        of score, and without a ceiling a near-zero amount would never be
-        challenged at all.
+        Two adjustments, both downward and both bounded:
+
+        **Amount** - Elkan's rule. A larger amount at risk justifies acting on
+        less confidence, because being wrong costs the same either way.
+
+        **Segment** - geography. A segment whose observed fraud rate is 5.9x the
+        domestic baseline needs proportionally less confidence, because the
+        prior is already against it.
+
+        Bounded at both ends. Without a floor a large enough amount would
+        challenge every transaction of that size regardless of score; without a
+        ceiling a near-zero amount would never be challenged at all.
         """
         flat = self.card_alert_threshold
-        if not AMOUNT_AWARE_STEP_UP or self.amount_cost is None or amount is None:
-            return flat if flat is not None else 1.0
-        scaled = self.amount_cost / (self.amount_cost + max(float(amount), 0.0) ** AMOUNT_EXPONENT)
-        return float(min(max(scaled, 0.01), 0.99))
+        threshold = flat if flat is not None else 1.0
+
+        if AMOUNT_AWARE_STEP_UP and self.amount_cost is not None and amount is not None:
+            threshold = self.amount_cost / (
+                self.amount_cost + max(float(amount), 0.0) ** AMOUNT_EXPONENT)
+
+        if SEGMENT_AWARE_STEP_UP and self.segment_risk:
+            from policy.segments import segment_of
+            multiple = self.segment_risk.get(
+                segment_of(addr2, self.home_country), 1.0)
+            threshold /= multiple
+
+        return float(min(max(threshold, 0.01), 0.99))
 
     # -- per-rail policy ----------------------------------------------------
-    def _decide_card(self, score: float, amount: float | None = None) -> Decision:
+    def _decide_card(self, score: float, amount: float | None = None,
+                     addr2=None) -> Decision:
         """Three bands. Blocking is reserved for near-certainty.
 
         Measured on the held-out test set: a single threshold at 2% declines
@@ -169,7 +229,7 @@ class FraudRouter:
                             evidence={"threshold": self.card_block_threshold,
                                       "amount_aware": False})
 
-        threshold = self.step_up_threshold(amount)
+        threshold = self.step_up_threshold(amount, addr2)
         if score >= threshold:
             aware = (AMOUNT_AWARE_STEP_UP and self.amount_cost is not None
                      and amount is not None)
@@ -202,7 +262,8 @@ class FraudRouter:
                 return Decision(rail, Action.ALLOW, 0.0,
                                 "no card model loaded", scored=False)
             return self._decide_card(self.card_scorer.score(txn),
-                                     txn.get("TransactionAmt"))
+                                     txn.get("TransactionAmt"),
+                                     txn.get("addr2"))
 
         if rail is Rail.WIRE:
             if self.wire_scorer is None:
