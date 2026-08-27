@@ -66,11 +66,16 @@ class WireFeatureBuilder:
 
     def __init__(self, with_patterns: bool = True,
                  with_chains: bool = False,
+                 with_flows: bool = False,
                  min_account_txns: int = 1,
                  max_cycles: int | None = None,
                  cycle_time_budget_s: float | None = None) -> None:
         self.with_patterns = with_patterns
         self.with_chains = with_chains
+        # The flow tracer reaches 79% of the labelled rings against 19% for the
+        # account-graph detectors, but until now it only fed case display. Off
+        # by default so the two feature sets can be compared honestly.
+        self.with_flows = with_flows
         # Bounds for large datasets; inert at their defaults.
         self.min_account_txns = min_account_txns
         self.max_cycles = max_cycles
@@ -78,6 +83,7 @@ class WireFeatureBuilder:
         self.out_stats: pd.DataFrame | None = None
         self.in_stats: pd.DataFrame | None = None
         self.pattern_stats: pd.DataFrame | None = None
+        self.flow_stats: pd.DataFrame | None = None
         self.format_codes: dict[str, int] = {}
         self.currency_codes: dict[str, int] = {}
         self._fitted = False
@@ -96,6 +102,13 @@ class WireFeatureBuilder:
                 min_account_txns=self.min_account_txns,
                 max_cycles=self.max_cycles,
                 cycle_time_budget_s=self.cycle_time_budget_s)
+
+        if self.with_flows:
+            from features.flows import build_flow_account_features
+            frame = train if "_ts" in train.columns else train.assign(
+                _ts=pd.to_datetime(train["Timestamp"], format="%Y/%m/%d %H:%M",
+                                   errors="coerce"))
+            self.flow_stats = build_flow_account_features(frame)
 
         self.format_codes = {v: i for i, v in
                              enumerate(sorted(train["Payment Format"].dropna().unique()))}
@@ -159,10 +172,12 @@ class WireFeatureBuilder:
                 amount.values / sent["sent_mean"].values).astype("float32")
 
         # --- the laundering shapes themselves ------------------------------
-        if self.pattern_stats is not None:
+        for table in (self.pattern_stats, self.flow_stats):
+            if table is None:
+                continue
             for side, col in (("from", SENDER), ("to", RECEIVER)):
-                stats = self.pattern_stats.reindex(df[col].values)
-                for name in self.pattern_stats.columns:
+                stats = table.reindex(df[col].values)
+                for name in table.columns:
                     out[f"{side}_{name}"] = stats[name].values
 
         return out.replace([np.inf, -np.inf], np.nan)
