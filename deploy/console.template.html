@@ -46,6 +46,9 @@ body {
 /* ---------- header ---------- */
 header {
   position: sticky; top: 0; z-index: 20;
+  /* Fixed height, because the sticky thead offsets against it. If this wraps
+     on a narrow screen the two overlap. */
+  flex-wrap: nowrap; overflow: hidden;
   display: flex; align-items: center; gap: 20px;
   padding: 0 18px; height: 46px;
   background: var(--panel);
@@ -74,7 +77,7 @@ nav button:focus-visible { outline: 2px solid var(--flow); outline-offset: -2px;
        display: inline-block; margin-right: 6px; vertical-align: middle; }
 
 /* ---------- layout ---------- */
-main { padding: 16px 18px 60px; max-width: 1420px; }
+main { padding: 16px 18px 60px; max-width: 1420px; margin-inline: auto; }
 [hidden] { display: none !important; }
 
 .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -88,8 +91,12 @@ main { padding: 16px 18px 60px; max-width: 1420px; }
 .stat .s { font-size: 11px; color: var(--ink-dim); margin-top: 1px; }
 
 /* ---------- queue table ---------- */
-.tablewrap { border: 1px solid var(--line); overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+.tablewrap { border: 1px solid var(--line); }
+table { width: 100%; min-width: 760px; border-collapse: collapse;
+        font-family: var(--mono); font-size: 12px; }
+/* The scroll lives on this wrapper, not on .tablewrap, so the sticky thead
+   still resolves against the viewport rather than a scroll box. */
+.scroll { overflow-x: auto; }
 thead th {
   position: sticky; top: 46px; z-index: 10;
   background: var(--panel-2); text-align: left; font-weight: 500;
@@ -102,6 +109,9 @@ tbody tr:hover { background: var(--panel); }
 tbody tr[aria-expanded="true"] { background: var(--panel-2); }
 tbody tr:focus-visible { outline: 2px solid var(--flow); outline-offset: -2px; }
 td { padding: 8px 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Mixed units (K / L / Cr) in one column only compare if they share a right
+   edge. Same for the counts beside them. */
+td.r, th.r { text-align: right; }
 td.shape { color: var(--ink-mid); }
 .rank { color: var(--ink-dim); width: 34px; }
 
@@ -111,8 +121,11 @@ td.shape { color: var(--ink-mid); }
 .tag.cyc { border-color: var(--flow-dim); color: var(--flow); }
 .tag.none { color: var(--ink-dim); border-style: dashed; }
 
-.bar { display: inline-block; height: 3px; background: var(--flow);
-       vertical-align: middle; margin-left: 8px; }
+/* Fixed-width track so every bar starts at the same x, which is what makes
+   scores comparable down the column. */
+.bartrack { display: inline-block; width: 46px; height: 3px;
+            background: var(--line-lit); margin-left: 9px; vertical-align: middle; }
+.bar { display: block; height: 3px; background: var(--flow); }
 
 /* ---------- expanded case ---------- */
 .detail td { padding: 0; }
@@ -131,8 +144,8 @@ td.shape { color: var(--ink-mid); }
 
 /* The path diagram - the thing this system produces that a generic console
    cannot. Accounts as nodes, the money as the line between them. */
-.path { display: flex; align-items: center; flex-wrap: wrap; gap: 0;
-        padding: 12px 0; }
+.path { display: flex; align-items: center; flex-wrap: wrap;
+        gap: 6px 0; padding: 10px 0; }
 .node { font-family: var(--mono); font-size: 11px; padding: 5px 9px;
         border: 1px solid var(--line-lit); background: var(--panel);
         white-space: nowrap; }
@@ -205,17 +218,17 @@ footer code { font-family: var(--mono); color: var(--ink-mid); }
 <main>
   <section id="p-queue" role="tabpanel" aria-labelledby="tab-queue">
     <div class="strip" id="qstats"></div>
-    <div class="tablewrap">
+    <div class="tablewrap"><div class="scroll">
       <table>
         <thead>
           <tr>
-            <th class="rank">#</th><th>Structure</th><th>Value</th><th>Accounts</th>
-            <th>Score</th><th>Age</th><th>Traced path</th>
+            <th class="rank">#</th><th>Structure</th><th class="r">Value</th><th class="r">Accounts</th>
+            <th>Score</th><th class="r">Age</th><th class="r">Paths</th>
           </tr>
         </thead>
         <tbody id="qbody"></tbody>
       </table>
-    </div>
+    </div></div>
     <p class="note" id="qnote"></p>
   </section>
 
@@ -236,6 +249,9 @@ const esc = v => String(v).replace(/[&<>"']/g,
   c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const fmt = n => n.toLocaleString("en-IN");
 const pct = n => (n * 100).toFixed(1) + "%";
+/* Everything in this queue is days old, and "239h" is harder to read than
+   "10d" when scanning a column. */
+const age = h => h == null ? "—" : h < 48 ? Math.round(h) + "h" : Math.round(h / 24) + "d";
 
 /* ---------- tabs ---------- */
 document.querySelectorAll('[role="tab"]').forEach(tab => {
@@ -278,11 +294,13 @@ const pathDiagram = f => {
     seen[a] = (seen[a] || 0) + 1;
     const cls = i === 0 ? "node origin"
       : (seen[a] > 1 ? "node repeat" : "node");
-    const hop = i < f.path.length - 1
-      ? `<span class="hop"><svg width="30" height="8" aria-hidden="true">
-           <line x1="0" y1="4" x2="23" y2="4" stroke="currentColor" stroke-width="1"/>
-           <path d="M23 1 L29 4 L23 7 Z" fill="currentColor"/></svg></span>` : "";
-    return `<span class="${cls}">${esc(a)}</span>${hop}`;
+    /* The arrow leads each node except the first, so it always sits between
+       two nodes - a wrap can never strand one at the end of a line. */
+    const hop = i === 0 ? ""
+      : `<span class="hop" aria-hidden="true"><svg width="26" height="8">
+           <line x1="0" y1="4" x2="19" y2="4" stroke="currentColor" stroke-width="1"/>
+           <path d="M19 1 L25 4 L19 7 Z" fill="currentColor"/></svg></span>`;
+    return `${hop}<span class="${cls}">${esc(a)}</span>`;
   }).join("");
   return `<div class="path">${parts}</div>
     <div class="flowmeta">${f.shape === "cycle" ? "Returns to origin" : "Ends elsewhere"} &middot;
@@ -294,7 +312,6 @@ const pathDiagram = f => {
 
 $("#qbody").innerHTML = q.map((c, i) => {
   const shape = shapeOf(c);
-  const width = Math.max(4, Math.round(c.score * 46));
   const flows = c.flows.length
     ? c.flows.map(pathDiagram).join('<div style="height:10px"></div>')
     : `<p class="flowmeta">No path could be traced. The model flagged these
@@ -307,11 +324,13 @@ $("#qbody").innerHTML = q.map((c, i) => {
   <tr tabindex="0" aria-expanded="false" data-i="${i}">
     <td class="rank num">${i + 1}</td>
     <td class="shape"><span class="tag ${shape === "CYCLE" ? "cyc" : shape === "NONE" ? "none" : ""}">${shape}</span></td>
-    <td class="num">₹ ${c.value_label}</td>
-    <td class="num">${c.accounts}</td>
-    <td class="num">${c.score.toFixed(3)}<span class="bar" style="width:${width}px"></span></td>
-    <td class="num">${c.age_hours == null ? "—" : Math.round(c.age_hours) + "h"}</td>
-    <td class="num" style="color:var(--ink-dim)">${c.flows.length || (c.fans.length ? "fan" : "—")}</td>
+    <td class="num r">₹ ${c.value_label}</td>
+    <td class="num r">${c.accounts}</td>
+    <td class="num">${c.score.toFixed(3)}<span class="bartrack"><span
+        class="bar" style="width:${Math.round(c.score * 100)}%"></span></span></td>
+    <td class="num r">${age(c.age_hours)}</td>
+    <td class="num r" style="color:var(--ink-dim)">${
+      c.flows.length || (c.fans.length ? "fan" : "none")}</td>
   </tr>
   <tr class="detail" hidden><td colspan="7"><div class="detailbox">
     <div class="detailhead">
