@@ -80,3 +80,104 @@ def format_operating_points(table: pd.DataFrame) -> str:
             f"{r.genuine_disturbed_pct:>11.2%} {r.false_alarms_per_catch:>12.1f}"
         )
     return "\n".join(lines)
+
+
+# --- value-weighted views ----------------------------------------------------
+# Counting frauds treats a 500-rupee loss and a 500,000-rupee loss as one event
+# each. The business does not. These functions weight by amount so the headline
+# becomes "what share of fraud *losses* did we stop", which is the number a bank
+# actually reports.
+#
+# The symmetry matters and is easy to lose: a wrongly blocked large payment is
+# also a larger mistake than a wrongly blocked small one. Both sides are weighted
+# here, so this is not an argument for blocking everything expensive.
+
+def value_operating_points(y_true: np.ndarray, scores: np.ndarray,
+                           amounts: np.ndarray,
+                           alert_rates: list[float] = ALERT_RATES) -> pd.DataFrame:
+    """Operating points measured in money rather than in transaction counts.
+
+    `value_recall` is the share of total fraud *value* sitting inside the flagged
+    set - the money the system had a chance to stop. `genuine_value_disturbed`
+    is the counterpart cost: the value of legitimate payments caught up in it.
+    """
+    n = len(y_true)
+    order = np.argsort(-scores, kind="stable")
+    labels, values = y_true[order], amounts[order]
+
+    total_fraud_value = float(values[labels == 1].sum())
+    total_genuine_value = float(values[labels == 0].sum())
+
+    rows = []
+    for rate in alert_rates:
+        k = max(1, int(round(n * rate)))
+        top_labels, top_values = labels[:k], values[:k]
+
+        caught_value = float(top_values[top_labels == 1].sum())
+        disturbed_value = float(top_values[top_labels == 0].sum())
+        rows.append({
+            "alert_rate": rate,
+            "count_recall": float((top_labels == 1).sum() / max((labels == 1).sum(), 1)),
+            "value_recall": caught_value / total_fraud_value if total_fraud_value else 0.0,
+            "fraud_value_stopped": caught_value,
+            "genuine_value_disturbed": disturbed_value,
+            "genuine_value_pct": disturbed_value / total_genuine_value if total_genuine_value else 0.0,
+            # How many rupees of legitimate payment are touched per rupee of
+            # fraud stopped. Below 1.0 the system is buying value cheaply.
+            "value_cost_ratio": disturbed_value / caught_value if caught_value else np.inf,
+        })
+    return pd.DataFrame(rows)
+
+
+def net_savings(y_true: np.ndarray, scores: np.ndarray, amounts: np.ndarray,
+                threshold: float, false_positive_cost: float = 0.0,
+                fraud_recovery_rate: float = 1.0) -> dict:
+    """Money saved, net of what the false positives cost.
+
+    Two parameters the caller has to supply, because neither is a property of
+    the model:
+
+    `false_positive_cost` - what one wrongly flagged transaction costs. For a
+    step-up challenge that is a small friction cost; for a hard block it is the
+    lost sale plus the support call plus some churn risk. Left at zero by
+    default so nothing is silently assumed.
+
+    `fraud_recovery_rate` - what share of a *stopped* fraud is genuinely saved.
+    Not always 1.0: some fraud would have been recovered anyway through
+    chargebacks, in which case blocking it saves the dispute cost rather than
+    the full amount.
+    """
+    flagged = scores >= threshold
+    fraud, genuine = y_true == 1, y_true == 0
+
+    stopped = float(amounts[flagged & fraud].sum()) * fraud_recovery_rate
+    missed = float(amounts[~flagged & fraud].sum())
+    false_positives = int((flagged & genuine).sum())
+    fp_cost = false_positives * false_positive_cost
+
+    return {
+        "fraud_value_stopped": stopped,
+        "fraud_value_missed": missed,
+        "false_positives": false_positives,
+        "false_positive_cost": fp_cost,
+        "net_saving": stopped - fp_cost,
+        "value_recall": stopped / (stopped + missed) if (stopped + missed) else 0.0,
+    }
+
+
+def format_value_points(table: pd.DataFrame) -> str:
+    """Count recall against value recall, side by side.
+
+    Showing both is the point: a gap between them means the model's ranking is
+    not aligned with where the money is.
+    """
+    lines = [
+        f"{'flag rate':>10} {'by count':>10} {'by value':>10} "
+        f"{'value stopped':>16} {'genuine touched':>17}",
+        "-" * 68,
+    ]
+    for _, r in table.iterrows():
+        lines.append(
+            f"{r.alert_rate:>9.1%} {r.count_recall:>10.1%} {r.value_recall:>10.1%} "
+            f"{r.fraud_value_stopped:>16,.0f} {r.genuine_value_disturbed:>17,.0f}")
+    return "\n".join(lines)
