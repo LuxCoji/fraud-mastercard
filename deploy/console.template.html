@@ -92,11 +92,8 @@ main { padding: 16px 18px 60px; max-width: 1420px; margin-inline: auto; }
 
 /* ---------- queue table ---------- */
 .tablewrap { border: 1px solid var(--line); }
-table { width: 100%; min-width: 760px; border-collapse: collapse;
+table { width: 100%; border-collapse: collapse;
         font-family: var(--mono); font-size: 12px; }
-/* The scroll lives on this wrapper, not on .tablewrap, so the sticky thead
-   still resolves against the viewport rather than a scroll box. */
-.scroll { overflow-x: auto; }
 thead th {
   position: sticky; top: 46px; z-index: 10;
   background: var(--panel-2); text-align: left; font-weight: 500;
@@ -198,6 +195,14 @@ footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line);
          font-size: 11px; color: var(--ink-dim); line-height: 1.7; }
 footer code { font-family: var(--mono); color: var(--ink-mid); }
 
+/* Below this the seven columns stop fitting. Accounts and age are the two an
+   investigator can lose - both are repeated in the expanded case. */
+@media (max-width: 720px) {
+  th:nth-child(4), td:nth-child(4),
+  th:nth-child(6), td:nth-child(6) { display: none; }
+  main { padding: 12px 10px 40px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
@@ -218,7 +223,7 @@ footer code { font-family: var(--mono); color: var(--ink-mid); }
 <main>
   <section id="p-queue" role="tabpanel" aria-labelledby="tab-queue">
     <div class="strip" id="qstats"></div>
-    <div class="tablewrap"><div class="scroll">
+    <div class="tablewrap">
       <table>
         <thead>
           <tr>
@@ -228,7 +233,7 @@ footer code { font-family: var(--mono); color: var(--ink-mid); }
         </thead>
         <tbody id="qbody"></tbody>
       </table>
-    </div></div>
+    </div>
     <p class="note" id="qnote"></p>
   </section>
 
