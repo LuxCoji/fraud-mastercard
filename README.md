@@ -73,11 +73,60 @@ pip install -r requirements.txt
 python src/data/verify.py        # Step 1 gate: proves all three sources load
 ```
 
+## Results
+
+Measured on held-out data. Every number carries the caveats recorded in
+`reports/`.
+
+| | Card rail | Wire rail |
+| --- | --- | --- |
+| Source | IEEE-CIS (**real**) | IBM AML HI-Medium (synthetic) |
+| Model | LightGBM + XGBoost, Platt-calibrated | XGBoost on 49 graph features |
+| Operating point | 2% of traffic | 1% of traffic |
+| Fraud caught | 45.6% | **69.5%** |
+| Precision | ~80% | ~12% |
+| Latency (p99) | **5.53 ms** | 10.6 ms |
+| Decisions | allow / step up / block | allow / investigate |
+
+**Genuine customers hard-declined on the card rail: 1 in 954.**
+
+The wire rail never blocks. At ~12% precision an automatic freeze would stop
+roughly eight innocent parties per real one, so it queues a case for a human -
+which is how AML works in practice.
+
+## What works, and what does not
+
+The reports document rejected experiments as carefully as accepted ones, because
+the rejections are what stop the work being repeated:
+
+| Finding | Report |
+| --- | --- |
+| PaySim is unusable - a three-line rule separates 97.8% of its fraud from 0.00% of legitimate traffic | `step3` |
+| Pattern-count graph features lift wire PR-AUC 45% | `step4b` |
+| Blending helps on cards and hurts on wires - the models must be comparably strong | `step2e`, `step4d` |
+| Isotonic calibration destroys ranking; Platt does not | `step2f` |
+| The card model catches 45.6% of frauds but only 30.7% of fraud **value** | `step10` |
+| Amount-aware thresholds catch 9 of the 20 largest frauds instead of 1 | `step10` |
+| Cross-border thresholds fail - the model already prices geography in | `step11` |
+| Flow tracing on a transaction graph: 19% to 79% ring coverage | `step12` |
+| TabPFN parked - capped at 50k rows against our 472k | `tabpfn_evaluation` |
+
 ## Status
 
-- [x] Step 0 - old Cloud Run deployment scaled to zero
-- [x] Step 1 - data staged and verified
-- [ ] Step 2 - card head
-- [ ] Step 3 - transfer head
-- [ ] Step 4 - wire head
-- [ ] Step 5 - router and policy
+- [x] Card rail - trained, calibrated, latency-verified
+- [x] Wire rail - trained on HI-Medium, promoted through the registry
+- [x] Router and three-band policy
+- [x] Case tracing with flow reconstruction
+- [x] Drift monitoring and model rollback
+- [x] 19 regression tests, one per bug that actually shipped
+- [ ] Investigator dashboard
+- [ ] LLM case summaries
+- [ ] Freeze workflow
+
+Transfer rail: **not shipped**. No public dataset supports a trustworthy model -
+see `reports/step3_transfer_paysim_unusable.md`.
+
+## Deploying
+
+Models are not in this repository - see `deploy/README.md`. They live in GCS and
+are fetched at startup, so promoting a model is an upload rather than a rebuild.
