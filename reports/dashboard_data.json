@@ -1,0 +1,1688 @@
+{
+ "generated": "2026-08-27T20:37:12+00:00",
+ "queue": [
+  {
+   "id": 0,
+   "score": 0.993,
+   "value": 15209516.0,
+   "value_label": "1.52 Cr",
+   "accounts": 4,
+   "alerts": 26,
+   "evidence": "CYCLE (5 hops, 76h)",
+   "age_hours": 239.2,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "cycle",
+     "hops": 5,
+     "path": [
+      "812D22980",
+      "811C599A0",
+      "811C597B0",
+      "811B83280",
+      "811C599A0",
+      "812D22980"
+     ],
+     "amount_in": 69596.640625,
+     "amount_out": 10748.1904296875,
+     "out_over_in": 0.154,
+     "span_hours": 75.6
+    },
+    {
+     "shape": "chain",
+     "hops": 5,
+     "path": [
+      "812D22980",
+      "811C599A0",
+      "811C597B0",
+      "811B83280",
+      "811C599A0",
+      "811B83280"
+     ],
+     "amount_in": 69596.640625,
+     "amount_out": 19530.359375,
+     "out_over_in": 0.281,
+     "span_hours": 94.3
+    },
+    {
+     "shape": "cycle",
+     "hops": 5,
+     "path": [
+      "812D22980",
+      "811C599A0",
+      "811C597B0",
+      "811B83280",
+      "811C599A0",
+      "812D22980"
+     ],
+     "amount_in": 69596.640625,
+     "amount_out": 51201.62890625,
+     "out_over_in": 0.736,
+     "span_hours": 121.7
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 1,
+   "score": 0.9783,
+   "value": 364327.6875,
+   "value_label": "3.64 L",
+   "accounts": 3,
+   "alerts": 20,
+   "evidence": "FLOW (4 hops, 20h)",
+   "age_hours": 226.5,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 4,
+     "path": [
+      "800662B10",
+      "80266F880",
+      "8021353D0",
+      "80266F880",
+      "8021353D0"
+     ],
+     "amount_in": 787.8900146484375,
+     "amount_out": 16375.4697265625,
+     "out_over_in": 20.784,
+     "span_hours": 20.4
+    },
+    {
+     "shape": "chain",
+     "hops": 4,
+     "path": [
+      "800662B10",
+      "80266F880",
+      "8021353D0",
+      "80266F880",
+      "8021353D0"
+     ],
+     "amount_in": 787.8900146484375,
+     "amount_out": 1652.72998046875,
+     "out_over_in": 2.098,
+     "span_hours": 32.8
+    },
+    {
+     "shape": "chain",
+     "hops": 4,
+     "path": [
+      "800662B10",
+      "80266F880",
+      "8021353D0",
+      "80266F880",
+      "8021353D0"
+     ],
+     "amount_in": 787.8900146484375,
+     "amount_out": 8772.7099609375,
+     "out_over_in": 11.134,
+     "span_hours": 38.0
+    }
+   ],
+   "fans": [
+    {
+     "hub": "80266F880",
+     "direction": "in",
+     "counterparties": 3,
+     "total": 302617.24670410156,
+     "span_hours": 11.7
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "score": 0.9619,
+   "value": 73555912.0,
+   "value_label": "7.36 Cr",
+   "accounts": 30,
+   "alerts": 49,
+   "evidence": "FLOW (4 hops, 92h)",
+   "age_hours": 240.0,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 4,
+     "path": [
+      "8000E1590",
+      "811A65E30",
+      "8000E1590",
+      "80B0C3F40",
+      "811B9B160"
+     ],
+     "amount_in": 62690.21875,
+     "amount_out": 14373.6904296875,
+     "out_over_in": 0.229,
+     "span_hours": 91.7
+    },
+    {
+     "shape": "chain",
+     "hops": 4,
+     "path": [
+      "811A4DBD0",
+      "811A65E30",
+      "8000E1590",
+      "80B0C3F40",
+      "811B9B160"
+     ],
+     "amount_in": 73798.5234375,
+     "amount_out": 14373.6904296875,
+     "out_over_in": 0.195,
+     "span_hours": 60.2
+    },
+    {
+     "shape": "chain",
+     "hops": 4,
+     "path": [
+      "811EDA7A0",
+      "811A65E30",
+      "8000E1590",
+      "80B0C3F40",
+      "811B9B160"
+     ],
+     "amount_in": 31774.150390625,
+     "amount_out": 14373.6904296875,
+     "out_over_in": 0.452,
+     "span_hours": 40.5
+    }
+   ],
+   "fans": [
+    {
+     "hub": "80B0C3F40",
+     "direction": "out",
+     "counterparties": 3,
+     "total": 48636.1591796875,
+     "span_hours": 17.0
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "score": 0.9589,
+   "value": 1083805.875,
+   "value_label": "10.84 L",
+   "accounts": 72,
+   "alerts": 71,
+   "evidence": "FAN-IN (71 counterparties)",
+   "age_hours": 186.8,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "803382430",
+     "direction": "in",
+     "counterparties": 71,
+     "total": 1083805.8996887207,
+     "span_hours": 0.5
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "score": 0.9368,
+   "value": 375675.28125,
+   "value_label": "3.76 L",
+   "accounts": 2,
+   "alerts": 9,
+   "evidence": "FLOW (3 hops, 6h)",
+   "age_hours": 226.7,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 3,
+     "path": [
+      "812A09D40",
+      "812A09CF0",
+      "812A09D40",
+      "812A09CF0"
+     ],
+     "amount_in": 55736.58984375,
+     "amount_out": 51319.73046875,
+     "out_over_in": 0.921,
+     "span_hours": 5.7
+    },
+    {
+     "shape": "chain",
+     "hops": 3,
+     "path": [
+      "812A09D40",
+      "812A09CF0",
+      "812A09D40",
+      "812A09CF0"
+     ],
+     "amount_in": 55736.58984375,
+     "amount_out": 16946.0,
+     "out_over_in": 0.304,
+     "span_hours": 8.2
+    },
+    {
+     "shape": "chain",
+     "hops": 3,
+     "path": [
+      "812A09D40",
+      "812A09CF0",
+      "812A09D40",
+      "812A09CF0"
+     ],
+     "amount_in": 55736.58984375,
+     "amount_out": 12651.150390625,
+     "out_over_in": 0.227,
+     "span_hours": 26.6
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 5,
+   "score": 0.9343,
+   "value": 330471.53125,
+   "value_label": "3.30 L",
+   "accounts": 3,
+   "alerts": 11,
+   "evidence": "CYCLE (4 hops, 52h)",
+   "age_hours": 236.6,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "cycle",
+     "hops": 4,
+     "path": [
+      "811FFF630",
+      "812D0C600",
+      "812D0C3C0",
+      "812D0C600",
+      "811FFF630"
+     ],
+     "amount_in": 63212.421875,
+     "amount_out": 66793.171875,
+     "out_over_in": 1.057,
+     "span_hours": 52.4
+    },
+    {
+     "shape": "cycle",
+     "hops": 4,
+     "path": [
+      "811FFF630",
+      "812D0C600",
+      "812D0C3C0",
+      "812D0C600",
+      "811FFF630"
+     ],
+     "amount_in": 63212.421875,
+     "amount_out": 66793.171875,
+     "out_over_in": 1.057,
+     "span_hours": 52.4
+    },
+    {
+     "shape": "cycle",
+     "hops": 4,
+     "path": [
+      "811FFF630",
+      "812D0C600",
+      "812D0C3C0",
+      "812D0C600",
+      "811FFF630"
+     ],
+     "amount_in": 31405.919921875,
+     "amount_out": 66793.171875,
+     "out_over_in": 2.127,
+     "span_hours": 51.5
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 6,
+   "score": 0.9231,
+   "value": 64070.19140625,
+   "value_label": "64.1 K",
+   "accounts": 6,
+   "alerts": 5,
+   "evidence": "FAN-OUT (6 counterparties)",
+   "age_hours": 227.0,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "80EB1E930",
+     "direction": "out",
+     "counterparties": 6,
+     "total": 130461.11279296875,
+     "span_hours": 20.9
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "score": 0.9123,
+   "value": 46129.59375,
+   "value_label": "46.1 K",
+   "accounts": 7,
+   "alerts": 6,
+   "evidence": "no structure found",
+   "age_hours": 220.2,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 8,
+   "score": 0.8578,
+   "value": 1203449.625,
+   "value_label": "12.03 L",
+   "accounts": 13,
+   "alerts": 12,
+   "evidence": "FAN-IN (7 counterparties)",
+   "age_hours": 239.1,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "805B0A6A0",
+     "direction": "in",
+     "counterparties": 7,
+     "total": 146331.77954101562,
+     "span_hours": 15.1
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "score": 0.8542,
+   "value": 487155.5,
+   "value_label": "4.87 L",
+   "accounts": 6,
+   "alerts": 5,
+   "evidence": "FLOW (2 hops, 2h)",
+   "age_hours": 239.9,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80451FEA0",
+      "80C6F48A0",
+      "8038059D0"
+     ],
+     "amount_in": 44424.75,
+     "amount_out": 8886.650390625,
+     "out_over_in": 0.2,
+     "span_hours": 2.3
+    }
+   ],
+   "fans": [
+    {
+     "hub": "80C6F48A0",
+     "direction": "out",
+     "counterparties": 4,
+     "total": 460355.451171875,
+     "span_hours": 11.9
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "score": 0.8345,
+   "value": 14252.62109375,
+   "value_label": "14.3 K",
+   "accounts": 4,
+   "alerts": 5,
+   "evidence": "CYCLE (2 hops, 17h)",
+   "age_hours": 202.7,
+   "actually_laundering": false,
+   "flows": [
+    {
+     "shape": "cycle",
+     "hops": 2,
+     "path": [
+      "808D89450",
+      "808D898B0",
+      "808D89450"
+     ],
+     "amount_in": 3411.909912109375,
+     "amount_out": 1552.3599853515625,
+     "out_over_in": 0.455,
+     "span_hours": 16.6
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "808D894F0",
+      "808D898B0",
+      "808D89450"
+     ],
+     "amount_in": 3449.10009765625,
+     "amount_out": 1552.3599853515625,
+     "out_over_in": 0.45,
+     "span_hours": 16.5
+    }
+   ],
+   "fans": [
+    {
+     "hub": "808D89450",
+     "direction": "in",
+     "counterparties": 3,
+     "total": 7391.6099853515625,
+     "span_hours": 0.1
+    },
+    {
+     "hub": "808D898B0",
+     "direction": "in",
+     "counterparties": 3,
+     "total": 10452.610107421875,
+     "span_hours": 0.2
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "score": 0.8236,
+   "value": 232434.953125,
+   "value_label": "2.32 L",
+   "accounts": 23,
+   "alerts": 22,
+   "evidence": "FLOW (3 hops, 13h)",
+   "age_hours": 238.1,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 3,
+     "path": [
+      "800063D30",
+      "80063B6D0",
+      "80087A9A0",
+      "80032F6C0"
+     ],
+     "amount_in": 5606.5498046875,
+     "amount_out": 5553.0498046875,
+     "out_over_in": 0.99,
+     "span_hours": 13.0
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "800063D30",
+      "80063B6D0",
+      "80087A9A0"
+     ],
+     "amount_in": 5606.5498046875,
+     "amount_out": 6569.66015625,
+     "out_over_in": 1.172,
+     "span_hours": 11.2
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "800060E60",
+      "8000FE1F0",
+      "800063D30"
+     ],
+     "amount_in": 16319.7998046875,
+     "amount_out": 16324.8896484375,
+     "out_over_in": 1.0,
+     "span_hours": 44.9
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 12,
+   "score": 0.8179,
+   "value": 82103.859375,
+   "value_label": "82.1 K",
+   "accounts": 9,
+   "alerts": 9,
+   "evidence": "FLOW (2 hops, 2h)",
+   "age_hours": 239.5,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "802B26510",
+      "80F984C70",
+      "80E4A4620"
+     ],
+     "amount_in": 2661.169921875,
+     "amount_out": 16239.599609375,
+     "out_over_in": 6.102,
+     "span_hours": 1.9
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "802B26510",
+      "80F984C70",
+      "80DC84FA0"
+     ],
+     "amount_in": 2661.169921875,
+     "amount_out": 12838.759765625,
+     "out_over_in": 4.824,
+     "span_hours": 5.0
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "802B26510",
+      "80F984C70",
+      "812411030"
+     ],
+     "amount_in": 2661.169921875,
+     "amount_out": 1793.6500244140625,
+     "out_over_in": 0.674,
+     "span_hours": 11.0
+    }
+   ],
+   "fans": [
+    {
+     "hub": "80F984C70",
+     "direction": "out",
+     "counterparties": 7,
+     "total": 66452.37902832031,
+     "span_hours": 15.7
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "score": 0.793,
+   "value": 19877.669921875,
+   "value_label": "19.9 K",
+   "accounts": 3,
+   "alerts": 2,
+   "evidence": "no structure found",
+   "age_hours": 240.0,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 14,
+   "score": 0.7699,
+   "value": 12538279.0,
+   "value_label": "1.25 Cr",
+   "accounts": 26,
+   "alerts": 25,
+   "evidence": "FAN-IN (25 counterparties)",
+   "age_hours": 203.3,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "80296BAF0",
+     "direction": "in",
+     "counterparties": 25,
+     "total": 12538279.082519531,
+     "span_hours": 0.5
+    }
+   ]
+  },
+  {
+   "id": 15,
+   "score": 0.7515,
+   "value": 259307.875,
+   "value_label": "2.59 L",
+   "accounts": 3,
+   "alerts": 2,
+   "evidence": "FAN-OUT (3 counterparties)",
+   "age_hours": 199.9,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "80B76EEA0",
+     "direction": "out",
+     "counterparties": 3,
+     "total": 440197.7216796875,
+     "span_hours": 10.4
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "score": 0.6944,
+   "value": 4577.8701171875,
+   "value_label": "4.6 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 202.5,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 17,
+   "score": 0.6018,
+   "value": 2423620.75,
+   "value_label": "24.24 L",
+   "accounts": 4,
+   "alerts": 4,
+   "evidence": "FAN-OUT (4 counterparties)",
+   "age_hours": 239.4,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "8075AC7C0",
+     "direction": "out",
+     "counterparties": 4,
+     "total": 2979487.4169921875,
+     "span_hours": 20.4
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "score": 0.5956,
+   "value": 112208.9921875,
+   "value_label": "1.12 L",
+   "accounts": 11,
+   "alerts": 10,
+   "evidence": "FLOW (2 hops, 33h)",
+   "age_hours": 233.0,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "8018BB080",
+      "800A8E530",
+      "801A655B0"
+     ],
+     "amount_in": 18888.259765625,
+     "amount_out": 15973.1201171875,
+     "out_over_in": 0.846,
+     "span_hours": 33.0
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 19,
+   "score": 0.5936,
+   "value": 53121.3984375,
+   "value_label": "53.1 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 193.2,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 20,
+   "score": 0.5866,
+   "value": 31796.140625,
+   "value_label": "31.8 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 184.4,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 21,
+   "score": 0.5828,
+   "value": 39667.1015625,
+   "value_label": "39.7 K",
+   "accounts": 22,
+   "alerts": 21,
+   "evidence": "FAN-IN (21 counterparties)",
+   "age_hours": 189.8,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "80993EAE0",
+     "direction": "in",
+     "counterparties": 21,
+     "total": 39667.0998840332,
+     "span_hours": 0.4
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "score": 0.5772,
+   "value": 8588.66015625,
+   "value_label": "8.6 K",
+   "accounts": 3,
+   "alerts": 2,
+   "evidence": "no structure found",
+   "age_hours": 229.9,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 23,
+   "score": 0.5766,
+   "value": 2700.8798828125,
+   "value_label": "2.7 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 200.2,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 24,
+   "score": 0.5231,
+   "value": 8325.4599609375,
+   "value_label": "8.3 K",
+   "accounts": 5,
+   "alerts": 4,
+   "evidence": "FAN-IN (4 counterparties)",
+   "age_hours": 198.7,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "801887F10",
+     "direction": "in",
+     "counterparties": 4,
+     "total": 8325.460083007812,
+     "span_hours": 0.4
+    }
+   ]
+  },
+  {
+   "id": 25,
+   "score": 0.5179,
+   "value": 788423.0625,
+   "value_label": "7.88 L",
+   "accounts": 11,
+   "alerts": 10,
+   "evidence": "no structure found",
+   "age_hours": 207.1,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 26,
+   "score": 0.5179,
+   "value": 925232.125,
+   "value_label": "9.25 L",
+   "accounts": 10,
+   "alerts": 9,
+   "evidence": "no structure found",
+   "age_hours": 213.7,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 27,
+   "score": 0.5084,
+   "value": 5736083.5,
+   "value_label": "57.36 L",
+   "accounts": 20,
+   "alerts": 19,
+   "evidence": "FAN-IN (19 counterparties)",
+   "age_hours": 214.8,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "801C0D550",
+     "direction": "in",
+     "counterparties": 19,
+     "total": 5736084.009765625,
+     "span_hours": 0.4
+    }
+   ]
+  },
+  {
+   "id": 28,
+   "score": 0.5074,
+   "value": 10633.0595703125,
+   "value_label": "10.6 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 239.8,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 29,
+   "score": 0.4923,
+   "value": 13184.169921875,
+   "value_label": "13.2 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 193.2,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 30,
+   "score": 0.4891,
+   "value": 119061296.0,
+   "value_label": "11.91 Cr",
+   "accounts": 18,
+   "alerts": 21,
+   "evidence": "CYCLE (2 hops)",
+   "age_hours": 209.2,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "80A444B70",
+     "direction": "in",
+     "counterparties": 17,
+     "total": 809180.6015625,
+     "span_hours": 0.4
+    },
+    {
+     "hub": "80A43A210",
+     "direction": "in",
+     "counterparties": 16,
+     "total": 118911797.93554688,
+     "span_hours": 0.4
+    }
+   ]
+  },
+  {
+   "id": 31,
+   "score": 0.4867,
+   "value": 73666.765625,
+   "value_label": "73.7 K",
+   "accounts": 4,
+   "alerts": 3,
+   "evidence": "FAN-IN (3 counterparties)",
+   "age_hours": 185.7,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "8095C8BC0",
+     "direction": "in",
+     "counterparties": 3,
+     "total": 73666.75927734375,
+     "span_hours": 0.2
+    }
+   ]
+  },
+  {
+   "id": 32,
+   "score": 0.4784,
+   "value": 74782.828125,
+   "value_label": "74.8 K",
+   "accounts": 9,
+   "alerts": 8,
+   "evidence": "no structure found",
+   "age_hours": 196.7,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 33,
+   "score": 0.4754,
+   "value": 29541.5,
+   "value_label": "29.5 K",
+   "accounts": 3,
+   "alerts": 2,
+   "evidence": "FAN-OUT (3 counterparties)",
+   "age_hours": 223.7,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "8089DC420",
+     "direction": "out",
+     "counterparties": 3,
+     "total": 54752.2197265625,
+     "span_hours": 13.3
+    }
+   ]
+  },
+  {
+   "id": 34,
+   "score": 0.4612,
+   "value": 5991.89013671875,
+   "value_label": "6.0 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 198.8,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 35,
+   "score": 0.4569,
+   "value": 12134.1103515625,
+   "value_label": "12.1 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 238.0,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 36,
+   "score": 0.4473,
+   "value": 49992.30859375,
+   "value_label": "50.0 K",
+   "accounts": 6,
+   "alerts": 5,
+   "evidence": "FLOW (2 hops, 11h)",
+   "age_hours": 230.2,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "801DB71F0",
+      "801F05EF0",
+      "801CD4740"
+     ],
+     "amount_in": 15146.2001953125,
+     "amount_out": 5134.85986328125,
+     "out_over_in": 0.339,
+     "span_hours": 11.3
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "801DB71F0",
+      "801F05EF0",
+      "80016D280"
+     ],
+     "amount_in": 15146.2001953125,
+     "amount_out": 12104.0400390625,
+     "out_over_in": 0.799,
+     "span_hours": 33.9
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "801DB71F0",
+      "801F05EF0",
+      "801928EE0"
+     ],
+     "amount_in": 15146.2001953125,
+     "amount_out": 3676.610107421875,
+     "out_over_in": 0.243,
+     "span_hours": 99.4
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 37,
+   "score": 0.4432,
+   "value": 3949.199951171875,
+   "value_label": "3.9 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 239.2,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 38,
+   "score": 0.4322,
+   "value": 1737197.25,
+   "value_label": "17.37 L",
+   "accounts": 3,
+   "alerts": 3,
+   "evidence": "no structure found",
+   "age_hours": 236.7,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 39,
+   "score": 0.4282,
+   "value": 92560.2890625,
+   "value_label": "92.6 K",
+   "accounts": 3,
+   "alerts": 2,
+   "evidence": "FLOW (2 hops, 26h)",
+   "age_hours": 146.3,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "800248110",
+      "800052EF0",
+      "80010ECB0"
+     ],
+     "amount_in": 12886.349609375,
+     "amount_out": 79673.9375,
+     "out_over_in": 6.183,
+     "span_hours": 26.1
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 40,
+   "score": 0.423,
+   "value": 70079.703125,
+   "value_label": "70.1 K",
+   "accounts": 18,
+   "alerts": 17,
+   "evidence": "CYCLE (2 hops)",
+   "age_hours": 194.8,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "8095B41A0",
+     "direction": "in",
+     "counterparties": 17,
+     "total": 59594.170471191406,
+     "span_hours": 0.4
+    },
+    {
+     "hub": "80925FEF0",
+     "direction": "in",
+     "counterparties": 17,
+     "total": 70079.70007324219,
+     "span_hours": 0.4
+    }
+   ]
+  },
+  {
+   "id": 41,
+   "score": 0.4222,
+   "value": 63673.65234375,
+   "value_label": "63.7 K",
+   "accounts": 9,
+   "alerts": 8,
+   "evidence": "FLOW (2 hops, 41h)",
+   "age_hours": 237.4,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80613F530",
+      "800924840",
+      "8008A24F0"
+     ],
+     "amount_in": 2304.830078125,
+     "amount_out": 6656.830078125,
+     "out_over_in": 2.888,
+     "span_hours": 40.7
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80C7F3EF0",
+      "800924840",
+      "8008A24F0"
+     ],
+     "amount_in": 5223.8701171875,
+     "amount_out": 6656.830078125,
+     "out_over_in": 1.274,
+     "span_hours": 23.0
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80AE9A7B0",
+      "800924840",
+      "8008A24F0"
+     ],
+     "amount_in": 10054.01953125,
+     "amount_out": 6656.830078125,
+     "out_over_in": 0.662,
+     "span_hours": 14.4
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 42,
+   "score": 0.417,
+   "value": 36497.23828125,
+   "value_label": "36.5 K",
+   "accounts": 11,
+   "alerts": 11,
+   "evidence": "FAN-IN (10 counterparties)",
+   "age_hours": 204.3,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "80DE96B80",
+     "direction": "in",
+     "counterparties": 10,
+     "total": 30913.769897460938,
+     "span_hours": 0.5
+    }
+   ]
+  },
+  {
+   "id": 43,
+   "score": 0.4092,
+   "value": 509400.1875,
+   "value_label": "5.09 L",
+   "accounts": 9,
+   "alerts": 8,
+   "evidence": "no structure found",
+   "age_hours": 226.3,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 44,
+   "score": 0.4026,
+   "value": 1471672.5,
+   "value_label": "14.72 L",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 216.4,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 45,
+   "score": 0.3983,
+   "value": 10720.0703125,
+   "value_label": "10.7 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 192.4,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 46,
+   "score": 0.3951,
+   "value": 82027.4453125,
+   "value_label": "82.0 K",
+   "accounts": 10,
+   "alerts": 9,
+   "evidence": "no structure found",
+   "age_hours": 239.8,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 47,
+   "score": 0.3935,
+   "value": 254156.640625,
+   "value_label": "2.54 L",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 190.5,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 48,
+   "score": 0.3929,
+   "value": 8667.349609375,
+   "value_label": "8.7 K",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 199.2,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 49,
+   "score": 0.3818,
+   "value": 133130.375,
+   "value_label": "1.33 L",
+   "accounts": 13,
+   "alerts": 12,
+   "evidence": "no structure found",
+   "age_hours": 196.5,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 50,
+   "score": 0.3764,
+   "value": 22996134.0,
+   "value_label": "2.30 Cr",
+   "accounts": 20,
+   "alerts": 19,
+   "evidence": "FAN-IN (19 counterparties)",
+   "age_hours": 200.3,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "80D3BD310",
+     "direction": "in",
+     "counterparties": 19,
+     "total": 22996135.26965332,
+     "span_hours": 0.5
+    }
+   ]
+  },
+  {
+   "id": 51,
+   "score": 0.3693,
+   "value": 84208.1484375,
+   "value_label": "84.2 K",
+   "accounts": 7,
+   "alerts": 6,
+   "evidence": "FAN-IN (6 counterparties)",
+   "age_hours": 200.3,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": [
+    {
+     "hub": "801FDAE60",
+     "direction": "in",
+     "counterparties": 6,
+     "total": 84208.14929199219,
+     "span_hours": 0.4
+    }
+   ]
+  },
+  {
+   "id": 52,
+   "score": 0.3672,
+   "value": 1834.6700439453125,
+   "value_label": "1.8 K",
+   "accounts": 2,
+   "alerts": 2,
+   "evidence": "no structure found",
+   "age_hours": 170.2,
+   "actually_laundering": true,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 53,
+   "score": 0.3634,
+   "value": 37556760.0,
+   "value_label": "3.76 Cr",
+   "accounts": 15,
+   "alerts": 14,
+   "evidence": "FLOW (2 hops, 72h)",
+   "age_hours": 208.7,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80B9B49F0",
+      "8043A0FB0",
+      "8043A6650"
+     ],
+     "amount_in": 18060.25,
+     "amount_out": 10411.849609375,
+     "out_over_in": 0.577,
+     "span_hours": 71.8
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80B9B49F0",
+      "8043A0FB0",
+      "80813F2F0"
+     ],
+     "amount_in": 18060.25,
+     "amount_out": 5065.75,
+     "out_over_in": 0.28,
+     "span_hours": 90.3
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80BAE7420",
+      "8043A0FB0",
+      "8043A6650"
+     ],
+     "amount_in": 8381.7001953125,
+     "amount_out": 10411.849609375,
+     "out_over_in": 1.242,
+     "span_hours": 64.9
+    }
+   ],
+   "fans": []
+  },
+  {
+   "id": 54,
+   "score": 0.3517,
+   "value": 35236.33984375,
+   "value_label": "35.2 K",
+   "accounts": 12,
+   "alerts": 12,
+   "evidence": "FLOW (2 hops, 9h)",
+   "age_hours": 203.1,
+   "actually_laundering": false,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "800131480",
+      "8005F12B0",
+      "8005FB6B0"
+     ],
+     "amount_in": 7877.39990234375,
+     "amount_out": 2185.489990234375,
+     "out_over_in": 0.277,
+     "span_hours": 9.0
+    }
+   ],
+   "fans": [
+    {
+     "hub": "8005FB6B0",
+     "direction": "in",
+     "counterparties": 11,
+     "total": 27358.940353393555,
+     "span_hours": 0.4
+    }
+   ]
+  },
+  {
+   "id": 55,
+   "score": 0.3501,
+   "value": 36261.1328125,
+   "value_label": "36.3 K",
+   "accounts": 5,
+   "alerts": 4,
+   "evidence": "FLOW (2 hops, 65h)",
+   "age_hours": 214.8,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "8010CDC50",
+      "8003E2FB0",
+      "800B65420"
+     ],
+     "amount_in": 14983.76953125,
+     "amount_out": 12249.73046875,
+     "out_over_in": 0.818,
+     "span_hours": 65.1
+    }
+   ],
+   "fans": [
+    {
+     "hub": "8010CDC50",
+     "direction": "out",
+     "counterparties": 4,
+     "total": 41156.159912109375,
+     "span_hours": 10.3
+    }
+   ]
+  },
+  {
+   "id": 56,
+   "score": 0.3351,
+   "value": 95353.6875,
+   "value_label": "95.4 K",
+   "accounts": 7,
+   "alerts": 7,
+   "evidence": "FLOW (2 hops, 1h)",
+   "age_hours": 222.3,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80F9F3E80",
+      "8106B1750",
+      "803197B30"
+     ],
+     "amount_in": 9159.349609375,
+     "amount_out": 1428.1600341796875,
+     "out_over_in": 0.156,
+     "span_hours": 0.9
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80F9F3E80",
+      "8106B1750",
+      "807FDA6D0"
+     ],
+     "amount_in": 9159.349609375,
+     "amount_out": 35570.7109375,
+     "out_over_in": 3.884,
+     "span_hours": 7.2
+    },
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "80F9F3E80",
+      "8106B1750",
+      "803197B30"
+     ],
+     "amount_in": 7103.080078125,
+     "amount_out": 1428.1600341796875,
+     "out_over_in": 0.201,
+     "span_hours": 0.8
+    }
+   ],
+   "fans": [
+    {
+     "hub": "80F9F4100",
+     "direction": "in",
+     "counterparties": 3,
+     "total": 42092.3896484375,
+     "span_hours": 0.4
+    },
+    {
+     "hub": "8106B1750",
+     "direction": "out",
+     "counterparties": 3,
+     "total": 46564.14050292969,
+     "span_hours": 6.3
+    }
+   ]
+  },
+  {
+   "id": 57,
+   "score": 0.3328,
+   "value": 18448.0,
+   "value_label": "18.4 K",
+   "accounts": 2,
+   "alerts": 2,
+   "evidence": "no structure found",
+   "age_hours": 196.2,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 58,
+   "score": 0.3292,
+   "value": 661888.9375,
+   "value_label": "6.62 L",
+   "accounts": 2,
+   "alerts": 1,
+   "evidence": "no structure found",
+   "age_hours": 185.6,
+   "actually_laundering": false,
+   "flows": [],
+   "fans": []
+  },
+  {
+   "id": 59,
+   "score": 0.3264,
+   "value": 29530.7578125,
+   "value_label": "29.5 K",
+   "accounts": 3,
+   "alerts": 3,
+   "evidence": "FLOW (2 hops, 29h)",
+   "age_hours": 198.9,
+   "actually_laundering": true,
+   "flows": [
+    {
+     "shape": "chain",
+     "hops": 2,
+     "path": [
+      "808D6DF20",
+      "80498D100",
+      "8095843D0"
+     ],
+     "amount_in": 12584.2197265625,
+     "amount_out": 16602.359375,
+     "out_over_in": 1.319,
+     "span_hours": 28.6
+    }
+   ],
+   "fans": []
+  }
+ ],
+ "monitor": {
+  "drift": [
+   {
+    "metric": "alert_rate",
+    "severity": "ok",
+    "baseline": 0.02002,
+    "current": 0.02345,
+    "detail": "share of traffic flagged"
+   },
+   {
+    "metric": "expected_precision",
+    "severity": "ok",
+    "baseline": 0.45534,
+    "current": 0.45586,
+    "detail": "label-free estimate; valid only while calibration holds"
+   },
+   {
+    "metric": "score_psi",
+    "severity": "ok",
+    "baseline": 0.0,
+    "current": 0.03124,
+    "detail": "population stability index (>0.1 minor, >0.25 major)"
+   },
+   {
+    "metric": "features_drifted",
+    "severity": "ok",
+    "baseline": 0.0,
+    "current": 0.0,
+    "detail": "of 16 watched (PSI>0.25); worst: none"
+   }
+  ],
+  "rails": {
+   "card": {
+    "model": "LightGBM + XGBoost, Platt-calibrated",
+    "version": "v1",
+    "alert_rate": 0.02,
+    "block_rate": 0.005,
+    "recall": 0.456,
+    "precision": 0.784,
+    "value_recall": 0.442,
+    "latency_p99_ms": 5.53,
+    "genuine_blocked": 0.00105,
+    "source": "IEEE-CIS (real transactions)"
+   },
+   "wire": {
+    "model": "XGBoost on 49 graph features",
+    "version": "v2",
+    "alert_rate": 0.01,
+    "recall": 0.6947942116143582,
+    "precision": 0.11590068342842812,
+    "latency_p99_ms": 10.58,
+    "source": "IBM AML HI-Medium (synthetic)",
+    "queue_version": "v1",
+    "queue_source": "IBM AML HI-Small (synthetic)",
+    "queue_recall": 0.5548
+   }
+  },
+  "registry": {
+   "active": {
+    "wire": "v2"
+   },
+   "versions": [
+    {
+     "version": "v1",
+     "created": "2026-08-27T19:10:32+00:00",
+     "rail": "wire",
+     "metrics": {
+      "pr_auc": 0.13767622751463582,
+      "auc": 0.977182715307588,
+      "brier": 0.001872185295881657,
+      "recall_at_operating_point": 0.5548135781858653,
+      "precision_at_operating_point": 0.09815890518853992
+     },
+     "notes": "HI-Small, 5.1M rows, 370 rings",
+     "files": [
+      "wire_xgboost.json",
+      "wire_feature_names.json"
+     ],
+     "active": false
+    },
+    {
+     "version": "v2",
+     "created": "2026-08-27T19:10:32+00:00",
+     "rail": "wire",
+     "metrics": {
+      "pr_auc": 0.3261522402220468,
+      "auc": 0.9828976390339063,
+      "brier": 0.0013651363994098764,
+      "recall_at_operating_point": 0.6947942116143582,
+      "precision_at_operating_point": 0.11590068342842812
+     },
+     "notes": "HI-Medium, 31.9M rows, 2,756 rings; cycles partial",
+     "files": [
+      "wire_xgboost_medium.json",
+      "wire_feature_names_medium.json"
+     ],
+     "active": true
+    }
+   ]
+  }
+ }
+}
