@@ -412,3 +412,50 @@ def test_decided_cases_leave_the_queue(tmp_path):
 
     reopen_case(1, "b.reviewer", "second look", log)
     assert [c.case_id for c in queue_after_decisions(cases, log)] == [0, 1, 2, 3]
+
+
+# --- support-agent explanations ----------------------------------------------
+
+def test_explanation_never_invents_a_number():
+    """An agent repeating a fabricated figure to a customer is the failure this
+    feature exists to avoid, so the check is a test rather than a hope."""
+    from policy.explain import Fact, verify
+
+    facts = [Fact("Amount", "27"), Fact("Time of day", "23:00")]
+
+    grounded, invented = verify(
+        "The payment was for 27 at 23:00.", facts)
+    assert grounded and not invented
+
+    grounded, invented = verify(
+        "The payment was for 27, well above the usual 4,500.", facts)
+    assert not grounded and "4500" in invented
+
+
+def test_facts_are_skipped_not_guessed():
+    """IEEE-CIS is heavily missing. A fact asserted from a NaN is a fabrication,
+    so an absent column must produce no claim about its value."""
+    import numpy as np
+    from policy.explain import build_facts
+
+    sparse = pd.Series({"TransactionAmt": 100.0, "hour": 3.0,
+                        "dist1": np.nan, "addr2": np.nan,
+                        "TransactionAmt_uid_mean": np.nan})
+    text = " ".join(str(f) for f in build_facts(sparse))
+
+    assert "100" in text and "03:00" in text
+    assert "nan" not in text.lower()
+    # Absent geography is reported as absent, never as a value.
+    assert "not supplied" in text
+    assert "Distance" not in text
+
+
+def test_unicode_punctuation_becomes_readable_ascii():
+    """The model returns narrow no-break spaces around numbers. Encoding with
+    errors='replace' turns each into a literal '?' mid-sentence, which reads as
+    corruption on an agent's screen."""
+    from policy.explain import _to_ascii
+
+    assert _to_ascii("was 27 units") == "was 27 units"
+    assert _to_ascii("the card’s spend") == "the card's spend"
+    assert "?" not in _to_ascii("a—b “quoted”")
