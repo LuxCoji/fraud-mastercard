@@ -196,8 +196,19 @@ def verify(summary: str, facts: list[Fact]) -> tuple[bool, list[str]]:
     feature exists to avoid, so it is checked rather than trusted.
     """
     def numbers(text: str) -> set[str]:
-        return {n.replace(",", "").rstrip(".0") or "0"
-                for n in re.findall(r"\d[\d,]*\.?\d*", text)}
+        """Every number in a string, normalised so 1,200 and 1200.0 match.
+
+        `rstrip(".0")` looks like the obvious normaliser and is wrong: it strips
+        trailing zeros from whole numbers too, turning 4500 into 45 and 100 into
+        1. An invented "4,500" then matched a real "45" and passed the check.
+        """
+        out = set()
+        for raw in re.findall(r"\d[\d,]*\.?\d*", text):
+            value = raw.replace(",", "")
+            if "." in value:
+                value = value.rstrip("0").rstrip(".")
+            out.add(value or "0")
+        return out
 
     given = set()
     for fact in facts:
