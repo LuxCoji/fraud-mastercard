@@ -322,3 +322,93 @@ def test_amount_aware_falls_back_when_uncalibrated():
     assert router.step_up_threshold(10) == 0.40
     assert router.step_up_threshold(100_000) == 0.40
     assert router.step_up_threshold(None) == 0.40
+
+
+# --- the freeze workflow -----------------------------------------------------
+
+class _FakeCase:
+    """Minimal stand-in - the workflow only reads these four attributes."""
+
+    def __init__(self, case_id, value=1000.0, score=0.9, evidence="CYCLE (4 hops)"):
+        self.case_id = case_id
+        self.total_value = value
+        self.max_score = score
+        self.evidence = evidence
+
+
+def test_a_freeze_requires_a_named_reviewer(tmp_path):
+    """'Who decided this' is the first question an audit asks. Defaulting to
+    'system' would make an automated freeze indistinguishable from a human one."""
+    from policy.actions import CaseLog, request_freeze
+
+    log = CaseLog(tmp_path / "cases.jsonl")
+    for bad in ("", "   "):
+        with pytest.raises(ValueError):
+            request_freeze(_FakeCase(1), bad, "circular flow", log)
+    with pytest.raises(ValueError):
+        request_freeze(_FakeCase(1), "a.reviewer", "", log)
+
+
+def test_a_large_freeze_needs_a_second_approval(tmp_path):
+    """A large freeze is both the most damaging when wrong and the most likely
+    to be challenged, so it should not rest on one person."""
+    from policy.actions import DUAL_APPROVAL_ABOVE, CaseLog, request_freeze
+
+    log = CaseLog(tmp_path / "cases.jsonl")
+    big = request_freeze(_FakeCase(1, value=DUAL_APPROVAL_ABOVE * 2),
+                         "a.reviewer", "layering", log)
+    assert big.pending is True
+
+    small = request_freeze(_FakeCase(2, value=1000.0),
+                           "a.reviewer", "layering", log)
+    assert small.pending is False
+
+    approved = request_freeze(_FakeCase(3, value=DUAL_APPROVAL_ABOVE * 2),
+                              "a.reviewer", "layering", log,
+                              second_reviewer="b.reviewer")
+    assert approved.pending is False
+
+
+def test_the_log_is_append_only_and_reconstructible(tmp_path):
+    """A cleared case that later turns out to be laundering has to be
+    reconstructible - what was decided, by whom, and when."""
+    from policy.actions import CaseLog, clear_case, reopen_case, request_freeze
+
+    log = CaseLog(tmp_path / "cases.jsonl")
+    clear_case(_FakeCase(7), "a.reviewer", "merchant settlement", log)
+    reopen_case(7, "b.reviewer", "new information", log)
+    request_freeze(_FakeCase(7), "b.reviewer", "confirmed layering", log)
+
+    history = log.for_case(7)
+    assert [d.action for d in history] == ["cleared", "reopened", "freeze_requested"]
+    assert log.current_state(7) == "freeze_requested"
+    # The clearing is still there - nothing was overwritten.
+    assert history[0].reason == "merchant settlement"
+
+
+def test_the_wire_rail_never_notifies_the_customer(tmp_path):
+    """Telling someone they are under AML review is tipping off - a criminal
+    offence under the PMLA, the BSA and POCA."""
+    from policy.actions import notify_customer
+
+    wire = notify_customer("wire", "freeze_requested")
+    assert wire["notify"] is False
+    assert "tipping off" in wire["reason"]
+
+    # Card fraud is the opposite: the customer is expected to be told.
+    assert notify_customer("card", "step_up")["notify"] is True
+    assert notify_customer("card", "block")["notify"] is True
+
+
+def test_decided_cases_leave_the_queue(tmp_path):
+    from policy.actions import CaseLog, clear_case, queue_after_decisions, reopen_case
+
+    log = CaseLog(tmp_path / "cases.jsonl")
+    cases = [_FakeCase(i) for i in range(4)]
+    assert len(queue_after_decisions(cases, log)) == 4
+
+    clear_case(cases[1], "a.reviewer", "payroll", log)
+    assert [c.case_id for c in queue_after_decisions(cases, log)] == [0, 2, 3]
+
+    reopen_case(1, "b.reviewer", "second look", log)
+    assert [c.case_id for c in queue_after_decisions(cases, log)] == [0, 1, 2, 3]

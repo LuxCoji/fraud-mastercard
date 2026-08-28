@@ -73,6 +73,40 @@ nav button:focus-visible { outline: 2px solid var(--flow); outline-offset: -2px;
 
 .status { margin-left: auto; display: flex; align-items: center; gap: 16px;
           font-family: var(--mono); font-size: 11px; color: var(--ink-dim); }
+.railnote { font-size: 12px; color: var(--ink-mid); line-height: 1.6;
+             border-left: 2px solid var(--flow-dim); padding-left: 12px;
+             margin: 0 0 16px; max-width: 68ch; }
+.railnote b { color: var(--ink); font-weight: 500; }
+
+.act { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+       text-transform: uppercase; padding: 1px 7px; border: 1px solid currentColor; }
+.act.block { color: var(--crit); }
+.act.step_up { color: var(--warn); }
+.act.allow { color: var(--ink-dim); }
+.right { color: var(--ok); } .wrong { color: var(--crit); }
+
+.sronly { position: absolute; width: 1px; height: 1px; overflow: hidden;
+           clip: rect(0 0 0 0); white-space: nowrap; }
+#who { font-family: var(--mono); font-size: 11px; width: 118px;
+       padding: 4px 8px; color: var(--ink); background: var(--ground);
+       border: 1px solid var(--line-lit); }
+#who:focus-visible { outline: 2px solid var(--flow); outline-offset: -1px; }
+#who::placeholder { color: var(--ink-dim); }
+
+/* A decided case stays visible but stops competing for attention. */
+tr.settled td { opacity: 0.42; }
+.state { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+         padding: 1px 7px; border: 1px solid currentColor; margin-left: 8px; }
+.state.freeze_requested { color: var(--crit); }
+.state.cleared { color: var(--ok); }
+.state.info_requested { color: var(--warn); }
+
+.reasonbox { display: flex; gap: 8px; margin-bottom: 12px; }
+.reasonbox input { flex: 1; max-width: 460px; font-family: var(--sans);
+                   font-size: 12px; padding: 7px 10px; color: var(--ink);
+                   background: var(--ground); border: 1px solid var(--line-lit); }
+.reasonbox input:focus-visible { outline: 2px solid var(--flow); outline-offset: -1px; }
+
 .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
        display: inline-block; margin-right: 6px; vertical-align: middle; }
 
@@ -166,6 +200,41 @@ td.shape { color: var(--ink-mid); }
 .actions button.primary:hover { background: var(--crit); color: var(--ground); }
 .actions button:focus-visible { outline: 2px solid var(--flow); outline-offset: 2px; }
 
+/* ---------- card decisions ---------- */
+/* No queue here by construction. The card rail decides in the authorisation
+   window; these are decisions already made, shown so a support call about a
+   declined payment can be answered. */
+const cd = DATA.card_decisions || [];
+const blocks = cd.filter(d => d.action === "block");
+const steps = cd.filter(d => d.action === "step_up");
+const blockRight = blocks.filter(d => d.actually_fraud).length;
+
+$("#cstats").innerHTML = [
+  ["Declined", blocks.length, "top " + pct(DATA.monitor.rails.card.block_rate) + " of traffic"],
+  ["Correctly declined", blocks.length ? Math.round(blockRight / blocks.length * 100) + "%" : "—",
+    blockRight + " of " + blocks.length + " were fraud"],
+  ["Challenged", steps.length, "OTP, not a decline"],
+  ["Wrongly declined", "1 in " + Math.round(1 / DATA.monitor.rails.card.genuine_blocked),
+    "of genuine customers"],
+  ["Decision time", DATA.monitor.rails.card.latency_p99_ms + " ms", "p99, budget 100 ms"],
+].map(([k, v, s]) => `<div class="stat"><div class="k">${k}</div>
+  <div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+
+$("#cbody").innerHTML = cd.map((d, i) => `<tr>
+  <td class="rank num">${i + 1}</td>
+  <td><span class="act ${esc(d.action)}">${d.action.replace("_", " ")}</span></td>
+  <td class="num r">₹ ${d.value_label}</td>
+  <td class="num">${d.score.toFixed(3)}<span class="bartrack"><span
+      class="bar" style="width:${Math.round(d.score * 100)}%"></span></span></td>
+  <td class="num r ${d.actually_fraud ? "right" : "wrong"}">${
+    d.actually_fraud ? "fraud" : "genuine"}</td>
+</tr>`).join("");
+
+$("#cnote").innerHTML = `The outcome column is only knowable because this is a
+  held-out evaluation set. <b>A live console would leave it blank until a
+  chargeback settled</b>, which takes weeks &mdash; that delay is the whole
+  reason the drift monitor watches the alert rate instead of waiting for truth.`;
+
 /* ---------- monitor ---------- */
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
          gap: 14px; }
@@ -211,10 +280,14 @@ footer code { font-family: var(--mono); color: var(--ink-mid); }
 <header>
   <div class="brand">FRAUD<span>OPS</span></div>
   <nav role="tablist">
-    <button role="tab" id="tab-queue" aria-selected="true" aria-controls="p-queue">Queue</button>
+    <button role="tab" id="tab-queue" aria-selected="true" aria-controls="p-queue">Wire queue</button>
+    <button role="tab" id="tab-card" aria-selected="false" aria-controls="p-card">Card</button>
     <button role="tab" id="tab-monitor" aria-selected="false" aria-controls="p-monitor">Monitor</button>
   </nav>
   <div class="status">
+    <label for="who" class="sronly">Reviewer</label>
+    <input id="who" placeholder="reviewer id" autocomplete="off"
+           aria-label="Your reviewer id">
     <span><span class="dot"></span>live</span>
     <span id="gen"></span>
   </div>
@@ -222,6 +295,11 @@ footer code { font-family: var(--mono); color: var(--ink-mid); }
 
 <main>
   <section id="p-queue" role="tabpanel" aria-labelledby="tab-queue">
+    <p class="railnote"><b>Wire rail only.</b> Every case here is a suspected
+      money-laundering operation awaiting human review. <b>The card rail has no
+      queue</b> &mdash; it decides inside the authorisation window in about 5 ms
+      and the payment is allowed, challenged or declined. Its decisions are on
+      the Card tab.</p>
     <div class="strip" id="qstats"></div>
     <div class="tablewrap">
       <table>
@@ -235,6 +313,24 @@ footer code { font-family: var(--mono); color: var(--ink-mid); }
       </table>
     </div>
     <p class="note" id="qnote"></p>
+  </section>
+
+  <section id="p-card" role="tabpanel" aria-labelledby="tab-card" hidden>
+    <p class="railnote"><b>Card rail.</b> These already happened &mdash; there is
+      nothing to approve. The list answers the opposite question to the wire
+      queue: <b>what did we decline, and was it right?</b> A wrongly declined
+      customer calls support, and this is what that call is answered from.</p>
+    <div class="strip" id="cstats"></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th class="rank">#</th><th>Decision</th><th class="r">Amount</th>
+          <th>Score</th><th class="r">Outcome</th>
+        </tr></thead>
+        <tbody id="cbody"></tbody>
+      </table>
+    </div>
+    <p class="note" id="cnote"></p>
   </section>
 
   <section id="p-monitor" role="tabpanel" aria-labelledby="tab-monitor" hidden>
@@ -326,7 +422,7 @@ $("#qbody").innerHTML = q.map((c, i) => {
       ₹${fmt(Math.round(f.total))} in ${f.span_hours}h</div>`).join("");
 
   return `
-  <tr tabindex="0" aria-expanded="false" data-i="${i}">
+  <tr tabindex="0" aria-expanded="false" data-i="${i}" data-case="${c.id}">
     <td class="rank num">${i + 1}</td>
     <td class="shape"><span class="tag ${shape === "CYCLE" ? "cyc" : shape === "NONE" ? "none" : ""}">${shape}</span></td>
     <td class="num r">₹ ${c.value_label}</td>
@@ -347,13 +443,90 @@ $("#qbody").innerHTML = q.map((c, i) => {
     </div>
     <div class="flowlabel">Traced money flow</div>
     ${flows}${fans}
-    <div class="actions">
-      <button class="primary">Escalate to freeze</button>
-      <button>Clear case</button>
-      <button>Request more information</button>
+    <div class="reasonbox">
+      <input id="reason-${c.id}" placeholder="Reason - recorded against your name"
+             aria-label="Reason for this decision">
     </div>
+    <div class="actions">
+      <button class="primary" data-act="freeze" data-case="${c.id}"
+              data-value="${c.value}">Request freeze</button>
+      <button data-act="clear" data-case="${c.id}">Clear case</button>
+      <button data-act="info" data-case="${c.id}">Request information</button>
+    </div>
+    <p class="flowmeta" id="ack-${c.id}" style="margin-top:10px"></p>
   </div></td></tr>`;
 }).join("");
+
+/* Decisions are held in the browser for this preview. In the deployed console
+   these calls post to src/policy/actions.py, which appends to a JSON Lines log -
+   nothing here freezes an account, and nothing overwrites a past decision. */
+const DECISIONS = [];
+const DUAL_APPROVAL_ABOVE = 1e7;
+
+const stateOf = id => {
+  const mine = DECISIONS.filter(d => d.case === id);
+  return mine.length ? mine[mine.length - 1].act : "open";
+};
+
+const decide = (act, id, value) => {
+  const who = $("#who").value.trim();
+  const ack = $("#ack-" + id);
+  if (!who) {
+    ack.innerHTML = `<span style="color:var(--warn)">Enter your reviewer id
+      first &mdash; every decision is recorded against a name.</span>`;
+    $("#who").focus();
+    return;
+  }
+  const reason = ($("#reason-" + id) || {}).value?.trim() || "";
+  if (act === "freeze" && !reason) {
+    ack.innerHTML = `<span style="color:var(--warn)">A freeze needs a stated
+      reason.</span>`;
+    return;
+  }
+
+  const label = {freeze: "freeze_requested", clear: "cleared",
+                 info: "info_requested"}[act];
+  DECISIONS.push({case: id, act: label, who, reason, at: new Date().toISOString()});
+
+  const pending = act === "freeze" && value > DUAL_APPROVAL_ABOVE;
+  ack.innerHTML = act === "freeze"
+    ? `Freeze <b>requested</b> by ${esc(who)}. This records an instruction for
+       the bank's own system &mdash; nothing is frozen from here.
+       ${pending ? `<span style="color:var(--warn)">Over
+       &#8377;1 Cr: a second reviewer must approve.</span>` : ""}
+       <span style="color:var(--ink-dim)">The customer is not told &mdash;
+       warning someone under AML review is tipping off.</span>`
+    : act === "clear"
+      ? `Cleared by ${esc(who)}. The case stays in the log and can be reopened.`
+      : `Information requested by ${esc(who)}. The case leaves the queue until
+         it is answered.`;
+
+  // Reflect the state on the row without rebuilding the table.
+  const row = document.querySelector(`tr[data-case="${id}"]`);
+  if (row) {
+    row.classList.add("settled");
+    const cell = row.querySelector("td.shape");
+    const existing = cell.querySelector(".state");
+    if (existing) existing.remove();
+    cell.insertAdjacentHTML("beforeend",
+      `<span class="state ${label}">${label.replace("_", " ")}</span>`);
+  }
+  renderDecisions();
+};
+
+const renderDecisions = () => {
+  const box = $("#decisions");
+  if (!box) return;
+  if (!DECISIONS.length) {
+    box.innerHTML = `<div class="row"><span class="l">No decisions yet this
+      session</span></div>`;
+    return;
+  }
+  box.innerHTML = DECISIONS.slice().reverse().map(d => `<div class="row">
+      <span class="l">case ${d.case} &middot; ${esc(d.who)}</span>
+      <span class="r"><span class="state ${d.act}">${d.act.replace("_", " ")}</span></span>
+    </div>`).join("");
+};
 
 const toggle = row => {
   const detail = row.nextElementSibling;
@@ -362,6 +535,13 @@ const toggle = row => {
   detail.hidden = open;
 };
 $("#qbody").addEventListener("click", e => {
+  const button = e.target.closest("button[data-act]");
+  if (button) {
+    decide(button.dataset.act, Number(button.dataset.case),
+           Number(button.dataset.value || 0));
+    return;                      // do not collapse the row behind the message
+  }
+  if (e.target.closest("input")) return;
   const row = e.target.closest("tr[data-i]");
   if (row) toggle(row);
 });
@@ -378,6 +558,41 @@ $("#qnote").innerHTML = `Ranked by model score, highest first. <b>${top20} of th
   than a dozen rows. <b>Nothing here is frozen automatically:</b> at this rail's
   precision an automatic freeze would stop roughly eight innocent parties per
   real one.`;
+
+/* ---------- card decisions ---------- */
+/* No queue here by construction. The card rail decides in the authorisation
+   window; these are decisions already made, shown so a support call about a
+   declined payment can be answered. */
+const cd = DATA.card_decisions || [];
+const blocks = cd.filter(d => d.action === "block");
+const steps = cd.filter(d => d.action === "step_up");
+const blockRight = blocks.filter(d => d.actually_fraud).length;
+
+$("#cstats").innerHTML = [
+  ["Declined", blocks.length, "top " + pct(DATA.monitor.rails.card.block_rate) + " of traffic"],
+  ["Correctly declined", blocks.length ? Math.round(blockRight / blocks.length * 100) + "%" : "—",
+    blockRight + " of " + blocks.length + " were fraud"],
+  ["Challenged", steps.length, "OTP, not a decline"],
+  ["Wrongly declined", "1 in " + Math.round(1 / DATA.monitor.rails.card.genuine_blocked),
+    "of genuine customers"],
+  ["Decision time", DATA.monitor.rails.card.latency_p99_ms + " ms", "p99, budget 100 ms"],
+].map(([k, v, s]) => `<div class="stat"><div class="k">${k}</div>
+  <div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+
+$("#cbody").innerHTML = cd.map((d, i) => `<tr>
+  <td class="rank num">${i + 1}</td>
+  <td><span class="act ${esc(d.action)}">${d.action.replace("_", " ")}</span></td>
+  <td class="num r">₹ ${d.value_label}</td>
+  <td class="num">${d.score.toFixed(3)}<span class="bartrack"><span
+      class="bar" style="width:${Math.round(d.score * 100)}%"></span></span></td>
+  <td class="num r ${d.actually_fraud ? "right" : "wrong"}">${
+    d.actually_fraud ? "fraud" : "genuine"}</td>
+</tr>`).join("");
+
+$("#cnote").innerHTML = `The outcome column is only knowable because this is a
+  held-out evaluation set. <b>A live console would leave it blank until a
+  chargeback settled</b>, which takes weeks &mdash; that delay is the whole
+  reason the drift monitor watches the alert rate instead of waiting for truth.`;
 
 /* ---------- monitor ---------- */
 const m = DATA.monitor, rails = m.rails;
@@ -425,6 +640,13 @@ $("#mgrid").innerHTML =
       <b>The precision estimate is a change detector, not a number to quote:</b>
       measured against truth it read 0.456 where the actual was 0.742.</p>
   </div></div>` +
+  `<div class="card"><h2>Decisions this session</h2><div class="body">
+    <div id="decisions"></div>
+    <p class="note">Every decision is appended to a log with the reviewer's name,
+      their reason and the evidence in front of them. <b>Nothing is
+      overwritten</b> &mdash; a cleared case that later turns out to be
+      laundering has to be reconstructible.</p>
+  </div></div>` +
   `<div class="card"><h2>Model registry</h2><div class="body">
     ${(m.registry.versions || []).map(v => `<div class="row">
       <span class="l">${esc(v.rail)} ${esc(v.version)}${v.active ? " &larr; active" : ""}</span>
@@ -436,6 +658,7 @@ $("#mgrid").innerHTML =
       PR-AUC would reject good retrains at random.</p>
   </div></div>`;
 
+renderDecisions();
 $("#gen").textContent = "data " + DATA.generated.replace("T", " ").replace("+00:00", "Z");
 $("#foot").innerHTML = `Card rail figures come from IEEE-CIS, real card
   transactions. <b>Wire rail figures come from IBM AML, which is synthetic</b>

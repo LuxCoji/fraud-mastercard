@@ -109,6 +109,43 @@ def build_queue() -> tuple[list[dict], str]:
     return queue, version
 
 
+def build_card_decisions(limit: int = 40) -> list[dict]:
+    """Recent card-rail decisions - blocks and step-ups.
+
+    The card rail produces no queue. It decides inside the authorisation window
+    in about 5 ms and the transaction is allowed, challenged or declined; there
+    is nothing to review afterwards in the way a wire case is reviewed.
+
+    What an operator does want is the opposite view: **what did we decline
+    today, and was it right?** A wrongly declined customer calls support, and
+    this is the list that call is answered from.
+    """
+    scores = np.load(cfg.INTERIM / "card_scores_final.npy")
+    y = np.load(cfg.INTERIM / "card_y_test.npy")
+    X = pd.read_parquet(cfg.INTERIM / "card_X_test.parquet")
+    amounts = X["TransactionAmt"].to_numpy(dtype="float64")
+
+    block_t = float(np.quantile(scores, 1 - 0.005))
+    alert_t = float(np.quantile(scores, 1 - 0.02))
+
+    order = np.argsort(-scores)[:limit]
+    rows = []
+    for i in order:
+        action = ("block" if scores[i] >= block_t
+                  else "step_up" if scores[i] >= alert_t else "allow")
+        rows.append({
+            "id": int(i),
+            "action": action,
+            "score": round(float(scores[i]), 4),
+            "value": float(amounts[i]),
+            "value_label": money(float(amounts[i])),
+            # Held-out data, so the outcome is known. A live console would show
+            # this column only once a chargeback had settled.
+            "actually_fraud": bool(y[i]),
+        })
+    return rows
+
+
 def build_monitor(queue_version: str) -> dict:
     """Health of both rails, plus a drift check against a fitted baseline."""
     card_scores = np.load(cfg.INTERIM / "card_scores_final.npy")
@@ -165,9 +202,15 @@ def main() -> None:
     print("building the monitor...", flush=True)
     monitor = build_monitor(queue_version)
 
+    print("building card decisions...", flush=True)
+    card_decisions = build_card_decisions()
+
     payload = {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        # The queue is wire-only by construction - the card rail decides inside
+        # the authorisation window and queues nothing.
         "queue": queue,
+        "card_decisions": card_decisions,
         "monitor": monitor,
     }
     out = cfg.REPORTS / "dashboard_data.json"
@@ -175,7 +218,11 @@ def main() -> None:
     print(f"\nwritten -> {out}  ({out.stat().st_size / 1e3:.0f} KB)")
 
     real = sum(c["actually_laundering"] for c in queue)
-    print(f"  queue precision: {real}/{len(queue)} ({real / len(queue):.0%})")
+    print(f"  wire queue precision: {real}/{len(queue)} ({real / len(queue):.0%})")
+    blocked = [d for d in card_decisions if d["action"] == "block"]
+    if blocked:
+        right = sum(d["actually_fraud"] for d in blocked)
+        print(f"  card blocks shown: {len(blocked)}, {right} were fraud")
     print(f"  with traced structure: "
           f"{sum(1 for c in queue if c['flows'] or c['fans'])}/{len(queue)}")
 

@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-27T20:37:12+00:00",
+ "generated": "2026-08-28T07:15:33+00:00",
  "queue": [
   {
    "id": 0,
@@ -1104,17 +1104,17 @@
    "flows": [],
    "fans": [
     {
-     "hub": "8095B41A0",
-     "direction": "in",
-     "counterparties": 17,
-     "total": 59594.170471191406,
-     "span_hours": 0.4
-    },
-    {
      "hub": "80925FEF0",
      "direction": "in",
      "counterparties": 17,
      "total": 70079.70007324219,
+     "span_hours": 0.4
+    },
+    {
+     "hub": "8095B41A0",
+     "direction": "in",
+     "counterparties": 17,
+     "total": 59594.170471191406,
      "span_hours": 0.4
     }
    ]
@@ -1582,6 +1582,328 @@
     }
    ],
    "fans": []
+  }
+ ],
+ "card_decisions": [
+  {
+   "id": 50711,
+   "action": "block",
+   "score": 0.511,
+   "value": 27.051000595092773,
+   "value_label": "27",
+   "actually_fraud": true
+  },
+  {
+   "id": 63199,
+   "action": "block",
+   "score": 0.511,
+   "value": 66.39800262451172,
+   "value_label": "66",
+   "actually_fraud": true
+  },
+  {
+   "id": 99501,
+   "action": "block",
+   "score": 0.5109,
+   "value": 22.74799919128418,
+   "value_label": "23",
+   "actually_fraud": true
+  },
+  {
+   "id": 50702,
+   "action": "block",
+   "score": 0.5108,
+   "value": 27.051000595092773,
+   "value_label": "27",
+   "actually_fraud": true
+  },
+  {
+   "id": 84115,
+   "action": "block",
+   "score": 0.5108,
+   "value": 59.020999908447266,
+   "value_label": "59",
+   "actually_fraud": true
+  },
+  {
+   "id": 64114,
+   "action": "block",
+   "score": 0.5107,
+   "value": 13.46399974822998,
+   "value_label": "13",
+   "actually_fraud": true
+  },
+  {
+   "id": 64111,
+   "action": "block",
+   "score": 0.5105,
+   "value": 13.46399974822998,
+   "value_label": "13",
+   "actually_fraud": true
+  },
+  {
+   "id": 57126,
+   "action": "block",
+   "score": 0.5103,
+   "value": 14.38599967956543,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 21639,
+   "action": "block",
+   "score": 0.5103,
+   "value": 44.26599884033203,
+   "value_label": "44",
+   "actually_fraud": true
+  },
+  {
+   "id": 116273,
+   "action": "block",
+   "score": 0.5103,
+   "value": 14.38599967956543,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 84184,
+   "action": "block",
+   "score": 0.5103,
+   "value": 29.81800079345703,
+   "value_label": "30",
+   "actually_fraud": true
+  },
+  {
+   "id": 21637,
+   "action": "block",
+   "score": 0.5102,
+   "value": 44.26599884033203,
+   "value_label": "44",
+   "actually_fraud": true
+  },
+  {
+   "id": 21643,
+   "action": "block",
+   "score": 0.5102,
+   "value": 44.26599884033203,
+   "value_label": "44",
+   "actually_fraud": true
+  },
+  {
+   "id": 79517,
+   "action": "block",
+   "score": 0.51,
+   "value": 13.402999877929688,
+   "value_label": "13",
+   "actually_fraud": true
+  },
+  {
+   "id": 21635,
+   "action": "block",
+   "score": 0.51,
+   "value": 44.26599884033203,
+   "value_label": "44",
+   "actually_fraud": true
+  },
+  {
+   "id": 16242,
+   "action": "block",
+   "score": 0.51,
+   "value": 53.611000061035156,
+   "value_label": "54",
+   "actually_fraud": true
+  },
+  {
+   "id": 57118,
+   "action": "block",
+   "score": 0.51,
+   "value": 22.74799919128418,
+   "value_label": "23",
+   "actually_fraud": true
+  },
+  {
+   "id": 63198,
+   "action": "block",
+   "score": 0.5099,
+   "value": 66.39800262451172,
+   "value_label": "66",
+   "actually_fraud": true
+  },
+  {
+   "id": 21641,
+   "action": "block",
+   "score": 0.5099,
+   "value": 44.26599884033203,
+   "value_label": "44",
+   "actually_fraud": true
+  },
+  {
+   "id": 35591,
+   "action": "block",
+   "score": 0.5099,
+   "value": 14.324999809265137,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 35508,
+   "action": "block",
+   "score": 0.5099,
+   "value": 14.324999809265137,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 9862,
+   "action": "block",
+   "score": 0.5098,
+   "value": 22.74799919128418,
+   "value_label": "23",
+   "actually_fraud": true
+  },
+  {
+   "id": 111373,
+   "action": "block",
+   "score": 0.5098,
+   "value": 82.62899780273438,
+   "value_label": "83",
+   "actually_fraud": true
+  },
+  {
+   "id": 50686,
+   "action": "block",
+   "score": 0.5097,
+   "value": 27.051000595092773,
+   "value_label": "27",
+   "actually_fraud": true
+  },
+  {
+   "id": 16251,
+   "action": "block",
+   "score": 0.5096,
+   "value": 53.611000061035156,
+   "value_label": "54",
+   "actually_fraud": true
+  },
+  {
+   "id": 111337,
+   "action": "block",
+   "score": 0.5096,
+   "value": 82.62899780273438,
+   "value_label": "83",
+   "actually_fraud": true
+  },
+  {
+   "id": 12554,
+   "action": "block",
+   "score": 0.5096,
+   "value": 45.92599868774414,
+   "value_label": "46",
+   "actually_fraud": true
+  },
+  {
+   "id": 64117,
+   "action": "block",
+   "score": 0.5095,
+   "value": 13.46399974822998,
+   "value_label": "13",
+   "actually_fraud": true
+  },
+  {
+   "id": 57124,
+   "action": "block",
+   "score": 0.5095,
+   "value": 14.38599967956543,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 35636,
+   "action": "block",
+   "score": 0.5093,
+   "value": 14.324999809265137,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 35554,
+   "action": "block",
+   "score": 0.5093,
+   "value": 14.324999809265137,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 64654,
+   "action": "block",
+   "score": 0.5093,
+   "value": 24.34600067138672,
+   "value_label": "24",
+   "actually_fraud": true
+  },
+  {
+   "id": 35598,
+   "action": "block",
+   "score": 0.5092,
+   "value": 14.324999809265137,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 92220,
+   "action": "block",
+   "score": 0.5091,
+   "value": 28.833999633789062,
+   "value_label": "29",
+   "actually_fraud": true
+  },
+  {
+   "id": 35468,
+   "action": "block",
+   "score": 0.5091,
+   "value": 14.324999809265137,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 85929,
+   "action": "block",
+   "score": 0.5091,
+   "value": 300.0,
+   "value_label": "300",
+   "actually_fraud": true
+  },
+  {
+   "id": 12556,
+   "action": "block",
+   "score": 0.509,
+   "value": 45.92599868774414,
+   "value_label": "46",
+   "actually_fraud": true
+  },
+  {
+   "id": 9018,
+   "action": "block",
+   "score": 0.509,
+   "value": 96.70800018310547,
+   "value_label": "97",
+   "actually_fraud": true
+  },
+  {
+   "id": 35560,
+   "action": "block",
+   "score": 0.509,
+   "value": 14.324999809265137,
+   "value_label": "14",
+   "actually_fraud": true
+  },
+  {
+   "id": 21638,
+   "action": "block",
+   "score": 0.5088,
+   "value": 44.26599884033203,
+   "value_label": "44",
+   "actually_fraud": true
   }
  ],
  "monitor": {
