@@ -459,3 +459,144 @@ def test_unicode_punctuation_becomes_readable_ascii():
     assert _to_ascii("was 27 units") == "was 27 units"
     assert _to_ascii("the card’s spend") == "the card's spend"
     assert "?" not in _to_ascii("a—b “quoted”")
+
+
+# --- TREASURE's self-supervised head ----------------------------------------
+
+def _tiny_treasure():
+    """A two-layer TREASURE over three dynamic attributes. Small enough to run."""
+    from models.treasure.config import CatAttr, ModelConfig, NumAttr, Schema
+    from models.treasure.model import build_model
+
+    schema = Schema()
+    schema.static_num, schema.static_cat = [], [CatAttr("card", 8)]
+    schema.dynamic_num = [NumAttr("amount"), NumAttr("time_delta")]
+    schema.dynamic_cat = [CatAttr("hour", 24)]
+    schema.signal_num, schema.signal_cat = [], [CatAttr("isFraud", 2)]
+    return build_model(schema, ModelConfig(d_model=16, n_layers=2, n_heads=2,
+                                           input_layers=1, max_seq_len=4))
+
+
+def _forward(model, lengths, max_len=4):
+    """Run the model over a batch whose sequences have the given real lengths."""
+    import torch
+
+    batch_size = len(lengths)
+    pad = torch.ones(batch_size, max_len, dtype=torch.bool)
+    for i, n in enumerate(lengths):
+        pad[i, :n] = False
+    batch = {
+        "static_num": torch.zeros(batch_size, 0),
+        "static_cat": torch.zeros(batch_size, 1, dtype=torch.long),
+        "dyn_num": torch.rand(batch_size, max_len, 2),
+        "dyn_cat": torch.randint(0, 24, (batch_size, max_len, 1)),
+        "pad_mask": pad,
+    }
+    return model(batch), batch
+
+
+def test_the_next_transaction_loss_survives_a_batch_with_no_transitions():
+    """A batch of one-transaction cards must not crash training.
+
+    The median card in IEEE-CIS has a single transaction, so a batch with no
+    position-to-position transition is a real shape, not a hypothetical. An
+    early version returned a plain zero there and `backward()` raised "element 0
+    of tensors does not require grad" - training died on the data's most common
+    case.
+    """
+    from models.treasure.train import next_transaction_loss
+
+    model = _tiny_treasure()
+    out, batch = _forward(model, lengths=[1, 1, 1])
+    loss = next_transaction_loss(out["next"], batch["dyn_num"],
+                                 batch["dyn_cat"], batch["pad_mask"])
+
+    assert loss.requires_grad, "the loss must stay attached to the graph"
+    loss.backward()          # the failure this test exists for
+
+
+def test_the_next_transaction_loss_ignores_padding():
+    """Padding must not enter the self-supervised objective.
+
+    A model can predict padding perfectly and learn nothing from it, so a loss
+    that counted padded positions would fall steadily while the encoder learned
+    less and less.
+    """
+    import torch
+
+    from models.treasure.train import next_transaction_loss
+
+    torch.manual_seed(0)
+    model = _tiny_treasure()
+    out, batch = _forward(model, lengths=[2, 2])
+    before = next_transaction_loss(out["next"], batch["dyn_num"],
+                                   batch["dyn_cat"], batch["pad_mask"])
+
+    # Scribble over the padded tail. Nothing about the loss may change.
+    batch["dyn_num"][:, 2:] = 999.0
+    batch["dyn_cat"][:, 2:] = 23
+    after = next_transaction_loss(out["next"], batch["dyn_num"],
+                                  batch["dyn_cat"], batch["pad_mask"])
+
+    assert torch.allclose(before, after), "padded positions leaked into the loss"
+
+
+def test_the_positive_weight_refuses_a_set_with_no_fraud():
+    """Silently weighting by an empty positive class would divide by zero."""
+    from models.treasure.train import positive_weight
+
+    seq = {"sig_cat": np.zeros((4, 3, 1), dtype="int64"),
+           "pad_mask": np.zeros((4, 3), dtype=bool)}
+    with pytest.raises(ValueError):
+        positive_weight(seq)
+
+
+def test_simulator_field_sequences_keep_the_same_row_order():
+    """Restricting the columns must not reorder the rows.
+
+    The simulator-field arm reuses the labels built for the full-field arm. If
+    the two orderings ever diverged, every score would be compared against a
+    different transaction's label - the exact failure that once produced AUC
+    0.5007 across three seeds.
+    """
+    from models.treasure.sequences import (DYNAMIC_CAT, DYNAMIC_NUM,
+                                           SIM_DYNAMIC_CAT, SIM_DYNAMIC_NUM,
+                                           SIM_STATIC_CAT, STATIC_CAT,
+                                           build_sequences, encode_categoricals,
+                                           prepare)
+
+    rng = np.random.default_rng(1)
+    n = 120
+    df = pd.DataFrame({
+        "TransactionDT": np.sort(rng.integers(0, 60 * 86_400, n)).astype(float),
+        "TransactionAmt": rng.gamma(2.0, 40.0, n),
+        "isFraud": (rng.random(n) < 0.1).astype(int),
+        "card1": rng.integers(10, 25, n), "card2": 1.0, "card3": 150.0,
+        "card4": "visa", "card5": 200.0, "card6": "debit",
+        "addr1": rng.integers(100, 110, n), "addr2": 87.0,
+        "dist1": rng.random(n), "dist2": np.nan,
+        "ProductCD": rng.choice(list("WCR"), n),
+        "P_emaildomain": "gmail.com", "R_emaildomain": np.nan,
+        "DeviceType": "mobile",
+    })
+    for i in range(1, 15):
+        df[f"C{i}"] = rng.integers(0, 5, n).astype(float)
+    for i in range(1, 16):
+        df[f"D{i}"] = rng.random(n) * 100
+    day = df["TransactionDT"] / 86_400
+    df["D1"] = day - df.groupby("card1")["TransactionDT"].transform("min") / 86_400
+    for i in range(1, 10):
+        df[f"M{i}"] = "T"
+
+    prepared = prepare(df)
+    columns = sorted(set(STATIC_CAT + DYNAMIC_CAT + SIM_STATIC_CAT + SIM_DYNAMIC_CAT))
+    codes, _ = encode_categoricals(prepared, prepared, columns)
+
+    full = build_sequences(prepared, codes, 8, STATIC_CAT, DYNAMIC_CAT, DYNAMIC_NUM)
+    sim = build_sequences(prepared, codes, 8, SIM_STATIC_CAT, SIM_DYNAMIC_CAT,
+                          SIM_DYNAMIC_NUM)
+
+    assert np.array_equal(full["row_index"][~full["pad_mask"]],
+                          sim["row_index"][~sim["pad_mask"]])
+    assert sim["dyn_num"].shape[-1] == len(SIM_DYNAMIC_NUM)
+    assert full["dyn_num"].shape[-1] == len(DYNAMIC_NUM)

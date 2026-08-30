@@ -54,6 +54,25 @@ DYNAMIC_NUM = (["TransactionAmt", "time_delta", "dist1", "dist2"]
                + [f"C{i}" for i in range(1, 15)]
                + [f"D{i}" for i in range(1, 16)])
 
+# The subset a payment simulator can genuinely emit.
+#
+# FinSim's `PaymentRequested` carries source account, destination account,
+# amount, gateway, transaction type and a timestamp; devices carry a type. It
+# has no billing address, no email domain, no geolocation and none of Vesta's
+# `M` match flags, so `addr1`, `addr2`, `dist1`, `dist2`, the email domains and
+# `M1-M9` are all dropped here.
+#
+# `C1-C14` and `D1-D15` are **kept**. They are counts of entities associated
+# with a card and day-deltas since first-seen events - both are derivable from
+# any raw event log, and FinSim owns its event log. That makes them a fair
+# inclusion, unlike the `V` block, which is Vesta's own engineered output and
+# cannot be recomputed anywhere else.
+SIM_STATIC_CAT = ["card1", "card2", "card3", "card5", "card4", "card6"]
+SIM_DYNAMIC_CAT = ["ProductCD", "DeviceType", "hour_of_day", "day_of_week"]
+SIM_DYNAMIC_NUM = (["TransactionAmt", "time_delta"]
+                   + [f"C{i}" for i in range(1, 15)]
+                   + [f"D{i}" for i in range(1, 16)])
+
 
 def build_uid(df: pd.DataFrame) -> pd.Series:
     """The same card identity the GBDT uses - card1 + addr1 + first-seen day.
@@ -117,19 +136,30 @@ def prepare(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_sequences(df: pd.DataFrame, codes: dict,
-                    max_len: int = MAX_SEQ_LEN) -> dict:
+                    max_len: int = MAX_SEQ_LEN,
+                    static_cols: list[str] | None = None,
+                    dyn_cat_cols: list[str] | None = None,
+                    dyn_num_cols: list[str] | None = None) -> dict:
     """One sequence per card, chronological, padded to `max_len`.
 
     Returns arrays shaped for the model plus `row_index`, which maps every
     (sequence, position) back to its original row - without it the predictions
     cannot be scored against the same test set the GBDT used.
+
+    The column lists default to the full IEEE-CIS mapping. Passing the `SIM_*`
+    lists instead measures the same architecture on the fields a payment
+    simulator can actually supply.
     """
+    static_cols = static_cols or STATIC_CAT
+    dyn_cat_cols = dyn_cat_cols or DYNAMIC_CAT
+    dyn_num_cols = dyn_num_cols or DYNAMIC_NUM
+
     df = df.sort_values(["uid", "TransactionDT"], kind="stable").reset_index()
     original_index = df["index"].values
 
-    static_cat = apply_codes(df, STATIC_CAT, codes)
-    dyn_cat = apply_codes(df, DYNAMIC_CAT, codes)
-    dyn_num = df[DYNAMIC_NUM].to_numpy(dtype="float32")
+    static_cat = apply_codes(df, static_cols, codes)
+    dyn_cat = apply_codes(df, dyn_cat_cols, codes)
+    dyn_num = df[dyn_num_cols].to_numpy(dtype="float32")
     dyn_num = np.nan_to_num(dyn_num, nan=0.0, posinf=0.0, neginf=0.0)
     labels = df["isFraud"].to_numpy(dtype="int64")
 
@@ -148,9 +178,9 @@ def build_sequences(df: pd.DataFrame, codes: dict,
 
     n = len(windows)
     out = {
-        "static_cat": np.zeros((n, len(STATIC_CAT)), dtype="int32"),
-        "dyn_cat": np.zeros((n, max_len, len(DYNAMIC_CAT)), dtype="int32"),
-        "dyn_num": np.zeros((n, max_len, len(DYNAMIC_NUM)), dtype="float32"),
+        "static_cat": np.zeros((n, len(static_cols)), dtype="int32"),
+        "dyn_cat": np.zeros((n, max_len, len(dyn_cat_cols)), dtype="int32"),
+        "dyn_num": np.zeros((n, max_len, len(dyn_num_cols)), dtype="float32"),
         "sig_cat": np.zeros((n, max_len, 1), dtype="int64"),
         "pad_mask": np.ones((n, max_len), dtype=bool),
         "row_index": np.full((n, max_len), -1, dtype="int64"),
