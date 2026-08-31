@@ -79,24 +79,61 @@ traffic, and by training time all of it is genuinely in the past. The lever that
 worked here at its weakest can be pulled properly there. That is a prediction to
 measure inside the sandbox, not a claim about what the number will be.
 
-## An error in this run's own design
+## Round two: does more pretraining pay, and what do the simulator fields cost?
 
-The simulator-field arm - TREASURE restricted to what FinSim can actually emit -
-was run on **C4's recipe**, which the same run then showed to be the worse one.
-It scored 30.31%. That number understates what the simulator would get and
-should not be quoted; a corrected run on C3's recipe is measured in the next
-step.
+Round one left two questions open. Round two answers both, with C3 re-run as its
+own control.
 
-Even understated it is the result that governs the integration:
+| arm | recall@2% | spread | genuine stopped | PR-AUC |
+| --- | --- | --- | --- | --- |
+| C3, pretrain 6 (control) | 33.74% | 0.0111 | 991 | 0.4093 |
+| C5, pretrain 12 | 32.50% | 0.0047 | 1,041 | 0.3720 |
+| **SIM, simulator fields only** | **33.23%** | 0.0099 | 1,011 | 0.3979 |
+
+**More pretraining does not keep paying.** Twelve epochs scored 1.24 points
+*below* six, losing on the mean and on two of three seeds. Six is the setting.
+
+**The simulator fields cost almost nothing.** Restricting the model to what
+FinSim can emit - no billing address, no email domain, no geolocation, none of
+Vesta's M flags - costs 0.50 points against a combined spread of 1.48. The two
+are not distinguishable at three seeds.
+
+The control reproduced round one seed for seed (34.06 / 34.65 / 32.50), so the
+pipeline is deterministic and these are not lucky draws.
+
+Round one's simulator arm was run on **C4's recipe**, which the same run showed
+to be the worse one. Its 30.31% understated the result by nearly three points
+and should not be quoted; 33.23% is the number.
+
+That correction changes the comparison that governs the integration:
 
 | model | anonymised V columns | recall@2% |
 | --- | --- | --- |
 | LightGBM, all 292 features | yes | 45.3% |
-| **TREASURE, simulator fields only** | **no** | **30.3%** |
+| **TREASURE, simulator fields only** | **no** | **33.2%** |
 | LightGBM, simulator-supplyable features | no | 14.1% |
 
-On the fields a payment simulator can supply, the sequence model is **more than
-double** the per-row model, on the worse of its two recipes.
+On the fields a payment simulator can supply, the sequence model scores **2.4
+times** the per-row model, and gives up almost nothing against its own
+full-field version.
+
+## What round two settles, and what it leaves open
+
+Settled: pretrain six epochs, fine-tune twenty, standard model size, simulator
+fields. That recipe is the one to ship.
+
+Open, and measured next: `card1` and `card2` are still in the inputs, and they
+are identifier-like - 13,553 and roughly 500 distinct values. The model learns
+one embedding per value, and an embedding for card1=13926 means nothing in
+another payment system. If they matter, the weights cannot leave this dataset
+and the sandbox model must be trained from scratch on simulator traffic. If they
+do not, the pretrained weights transfer and only fine-tuning is needed.
+
+The paper does not use card identifiers at all - it groups transactions by card
+and feeds the model card properties, handling even 150-million-cardinality
+merchants through category mappings rather than ID embeddings. So the
+expectation is that dropping them costs little. That is an expectation, not a
+measurement, which is why it is being measured.
 
 ## A crash the smoke test caught before Kaggle did
 

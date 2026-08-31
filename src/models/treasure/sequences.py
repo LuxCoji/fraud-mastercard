@@ -68,6 +68,22 @@ DYNAMIC_NUM = (["TransactionAmt", "time_delta", "dist1", "dist2"]
 # inclusion, unlike the `V` block, which is Vesta's own engineered output and
 # cannot be recomputed anywhere else.
 SIM_STATIC_CAT = ["card1", "card2", "card3", "card5", "card4", "card6"]
+
+# The portable subset: no raw identifiers anywhere in the inputs.
+#
+# The paper never feeds a card identifier to the model. It uses the card only to
+# **group** transactions into a sequence - "it is more meaningful to group
+# transactions from the same card together and order them chronologically" - and
+# handles even 150 million merchants through category mappings rather than ID
+# embeddings.
+#
+# `card1` and `card2` are identifier-like in IEEE-CIS (13,553 and roughly 500
+# distinct values). An embedding learned for card1=13926 means nothing in
+# another payment system, so any model using them is tied to the dataset it was
+# trained on. Dropping them leaves card properties - network, debit or credit,
+# issuing country - which are the same kind of thing everywhere. Grouping by
+# account still works, because grouping needs no embedding.
+PORT_STATIC_CAT = ["card3", "card4", "card5", "card6"]
 SIM_DYNAMIC_CAT = ["ProductCD", "DeviceType", "hour_of_day", "day_of_week"]
 SIM_DYNAMIC_NUM = (["TransactionAmt", "time_delta"]
                    + [f"C{i}" for i in range(1, 15)]
