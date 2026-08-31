@@ -81,8 +81,20 @@ SIM_STATIC_CAT = ["card1", "card2", "card3", "card5", "card4", "card6"]
 # distinct values). An embedding learned for card1=13926 means nothing in
 # another payment system, so any model using them is tied to the dataset it was
 # trained on. Dropping them leaves card properties - network, debit or credit,
-# issuing country - which are the same kind of thing everywhere. Grouping by
-# account still works, because grouping needs no embedding.
+# issuing country - which are the same kind of thing everywhere.
+#
+# **The grouping key is a separate matter, and it is not portable.** These
+# columns are what the model *reads*; `build_uid` below is what decides where
+# one sequence ends and the next begins, and it uses `card1 + addr1 +
+# first-seen-day`. `addr1` is one of the fields listed above as unavailable in
+# a simulator, so the partition measured here cannot be reproduced there -
+# FinSim groups by source account instead.
+#
+# That is a real caveat rather than a defect. Both keys answer "one entity's
+# trajectory", but they cut the stream differently: the median IEEE-CIS uid
+# holds one transaction, while a simulator account accumulates history for as
+# long as it exists. A number measured under one partition is evidence about
+# the architecture, not a prediction of what the other will score.
 PORT_STATIC_CAT = ["card3", "card4", "card5", "card6"]
 SIM_DYNAMIC_CAT = ["ProductCD", "DeviceType", "hour_of_day", "day_of_week"]
 SIM_DYNAMIC_NUM = (["TransactionAmt", "time_delta"]
@@ -163,8 +175,14 @@ def build_sequences(df: pd.DataFrame, codes: dict,
     cannot be scored against the same test set the GBDT used.
 
     The column lists default to the full IEEE-CIS mapping. Passing the `SIM_*`
-    lists instead measures the same architecture on the fields a payment
-    simulator can actually supply.
+    lists measures the same architecture on the fields a payment simulator can
+    supply; `PORT_STATIC_CAT` goes further and drops the identifier-like card
+    columns, for the question of whether the weights can leave this dataset.
+
+    Whichever static list is passed must also have been passed to
+    `encode_categoricals`, or `apply_codes` raises `KeyError` on the first
+    column it cannot find. They are separate arguments to separate functions
+    and nothing couples them.
     """
     static_cols = static_cols or STATIC_CAT
     dyn_cat_cols = dyn_cat_cols or DYNAMIC_CAT

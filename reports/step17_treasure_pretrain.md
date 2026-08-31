@@ -84,14 +84,27 @@ measure inside the sandbox, not a claim about what the number will be.
 Round one left two questions open. Round two answers both, with C3 re-run as its
 own control.
 
-| arm | recall@2% | spread | genuine stopped | PR-AUC |
+| arm | recall@2% | spread (per arm) | genuine stopped | PR-AUC |
 | --- | --- | --- | --- | --- |
 | C3, pretrain 6 (control) | 33.74% | 0.0111 | 991 | 0.4093 |
 | C5, pretrain 12 | 32.50% | 0.0047 | 1,041 | 0.3720 |
 | **SIM, simulator fields only** | **33.23%** | 0.0099 | 1,011 | 0.3979 |
 
-**More pretraining does not keep paying.** Twelve epochs scored 1.24 points
-*below* six, losing on the mean and on two of three seeds. Six is the setting.
+The spread column here is each arm's **own** standard deviation across its three
+seeds. Round one's table reports the *combined* spread against C0, which is why
+C3 reads 0.0119 there and 0.0111 here - two different quantities, and the
+control did reproduce seed for seed.
+
+**More pretraining does not pay, but that is weaker than it first reads.**
+Twelve epochs scored 1.24 points *below* six, losing on the mean and on two of
+three seeds. Applied symmetrically, the rule fixed in round one does **not**
+settle this: the gap is 1.24 against a combined spread of 1.21, inside the
+noise, and C5 won one seed. C1 and C4 were filed "not proven" on exactly that
+basis, so the honest verdict here is **not proven worse**, not "twelve is
+worse".
+
+Six is kept as the setting because it is the arm that cleared the bar in round
+one and nothing has displaced it - not because twelve was shown to be worse.
 
 **The simulator fields cost almost nothing.** Restricting the model to what
 FinSim can emit - no billing address, no email domain, no geolocation, none of
@@ -120,7 +133,8 @@ full-field version.
 ## What round two settles, and what it leaves open
 
 Settled: pretrain six epochs, fine-tune twenty, standard model size, simulator
-fields. That recipe is the one to ship.
+fields. That recipe is the one to ship - it is the arm that cleared the
+pre-registered bar, and no later arm has displaced it.
 
 Open, and measured next: `card1` and `card2` are still in the inputs, and they
 are identifier-like - 13,553 and roughly 500 distinct values. The model learns

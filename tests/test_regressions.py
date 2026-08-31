@@ -560,10 +560,10 @@ def test_simulator_field_sequences_keep_the_same_row_order():
     0.5007 across three seeds.
     """
     from models.treasure.sequences import (DYNAMIC_CAT, DYNAMIC_NUM,
-                                           SIM_DYNAMIC_CAT, SIM_DYNAMIC_NUM,
-                                           SIM_STATIC_CAT, STATIC_CAT,
-                                           build_sequences, encode_categoricals,
-                                           prepare)
+                                           PORT_STATIC_CAT, SIM_DYNAMIC_CAT,
+                                           SIM_DYNAMIC_NUM, SIM_STATIC_CAT,
+                                           STATIC_CAT, build_sequences,
+                                           encode_categoricals, prepare)
 
     rng = np.random.default_rng(1)
     n = 120
@@ -589,14 +589,22 @@ def test_simulator_field_sequences_keep_the_same_row_order():
         df[f"M{i}"] = "T"
 
     prepared = prepare(df)
-    columns = sorted(set(STATIC_CAT + DYNAMIC_CAT + SIM_STATIC_CAT + SIM_DYNAMIC_CAT))
+    columns = sorted(set(STATIC_CAT + DYNAMIC_CAT + SIM_STATIC_CAT
+                         + SIM_DYNAMIC_CAT + PORT_STATIC_CAT))
     codes, _ = encode_categoricals(prepared, prepared, columns)
 
     full = build_sequences(prepared, codes, 8, STATIC_CAT, DYNAMIC_CAT, DYNAMIC_NUM)
     sim = build_sequences(prepared, codes, 8, SIM_STATIC_CAT, SIM_DYNAMIC_CAT,
                           SIM_DYNAMIC_NUM)
 
-    assert np.array_equal(full["row_index"][~full["pad_mask"]],
-                          sim["row_index"][~sim["pad_mask"]])
+    # The portable arm drops card1 and card2 from the *inputs*. It must not
+    # change the row order, because the arms share one set of labels.
+    port = build_sequences(prepared, codes, 8, PORT_STATIC_CAT, SIM_DYNAMIC_CAT,
+                           SIM_DYNAMIC_NUM)
+
+    order = full["row_index"][~full["pad_mask"]]
+    assert np.array_equal(order, sim["row_index"][~sim["pad_mask"]])
+    assert np.array_equal(order, port["row_index"][~port["pad_mask"]])
     assert sim["dyn_num"].shape[-1] == len(SIM_DYNAMIC_NUM)
     assert full["dyn_num"].shape[-1] == len(DYNAMIC_NUM)
+    assert port["static_cat"].shape[-1] == len(PORT_STATIC_CAT)
