@@ -98,10 +98,11 @@ control did reproduce seed for seed.
 **More pretraining does not pay, but that is weaker than it first reads.**
 Twelve epochs scored 1.24 points *below* six, losing on the mean and on two of
 three seeds. Applied symmetrically, the rule fixed in round one does **not**
-settle this: the gap is 1.24 against a combined spread of 1.21, inside the
-noise, and C5 won one seed. C1 and C4 were filed "not proven" on exactly that
-basis, so the honest verdict here is **not proven worse**, not "twelve is
-worse".
+settle this - but not for the reason a first correction to this paragraph gave.
+The gap of 1.24 points *does* exceed the combined spread of 1.21, so C5 clears
+the magnitude leg. It fails the other one: C5 won a seed, and the rule requires
+winning on every seed. That is a different failure from C1's and C4's, which
+missed on magnitude. The honest verdict is **not proven worse**.
 
 Six is kept as the setting because it is the arm that cleared the bar in round
 one and nothing has displaced it - not because twelve was shown to be worse.
@@ -132,9 +133,16 @@ full-field version.
 
 ## What round two settles, and what it leaves open
 
-Settled: pretrain six epochs, fine-tune twenty, standard model size, simulator
-fields. That recipe is the one to ship - it is the arm that cleared the
-pre-registered bar, and no later arm has displaced it.
+Settled: pretrain six epochs, fine-tune twenty, standard model size. **C3
+cleared the pre-registered bar with the full field set**, and nothing since has
+displaced it.
+
+The simulator-field variant is a separate question and has *not* been put to the
+same test. Against C0 its gap is +0.86 points on a combined spread of about
+1.08, so it would not clear the magnitude leg. What round two measured is that
+SIM is not distinguishable from C3 - which is the useful comparison, since the
+simulator fields are a constraint rather than a choice - but that is not the
+same as SIM clearing the bar itself.
 
 Open, and measured next: `card1` and `card2` are still in the inputs, and they
 are identifier-like - 13,553 and roughly 500 distinct values. The model learns
